@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.1 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.2 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -38,7 +38,7 @@ Format: **UI-Begriff** (`Code-Name`) – Bedeutung. Die Oberfläche nutzt deutsc
 - **Block** (`Block`) – Eingeplante Uhrzeit (Start und Ende) für einen Tages-Eintrag. Wird in Google Calendar zu einem Kalendereintrag.
 - **Serie** (`Series`) – Wiederholungsregel, die laufend Einträge erzeugt.
 - **Fremdtermin** (`ExternalEvent`) – Termin aus Google Calendar, der nicht von Timasy stammt. Nur lesbar.
-- **Backlog** – Aufgaben ohne offenen Eintrag, also keinem Zeitraum zugewiesen.
+- **Backlog** – Aufgaben, die keinem Zeitraum zugewiesen sind: Sie haben keinen offenen Eintrag und wurden nie erledigt. Erledigte Aufgaben erscheinen nicht im Backlog.
 - **Überfällig** – Kennzeichnung eines Eintrags, der aus einem vergangenen Zeitraum übertragen wurde.
 
 ## 4. Datenmodell
@@ -54,7 +54,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **SyncState:** pro Kalender der Sync-Token und der Zeitpunkt des letzten Abgleichs; ID des Timasy-Kalenders.
 - **Settings:** Zeitzone (Standard `Europe/Zurich`), Wochenstart (Montag), Sync-Intervall (5 Minuten), gewählte Kalender, Theme.
 
-**Beziehungen:** Eine Aufgabe hat viele Einträge (nacheinander, z.B. durch Übertragung); ein Eintrag hat null oder einen Block. Eine Aufgabe gilt als zugewiesen, solange sie einen offenen Eintrag hat.
+**Beziehungen:** Eine Aufgabe hat viele Einträge (nacheinander, z.B. durch Übertragung); ein Eintrag hat null oder einen Block. Eine Aufgabe gilt als zugewiesen, solange sie einen offenen Eintrag hat. Sie gilt als erledigt, sobald einer ihrer Einträge erledigt ist; erledigte Aufgaben erscheinen nicht im Backlog.
 
 **Speicherung:** eine SQLite-Datei; Schema-Änderungen laufen über versionierte Migrationen. Zeiten werden mit Zeitzone gespeichert. Serien rechnen in lokaler Zeit, damit eine Uhrzeit über die Sommerzeit-Umstellung hinweg gleich bleibt.
 
@@ -63,7 +63,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 ### Stufen und Fortschritt
 
 - **R-1 \[Entscheid\]** Jeder Eintrag hat genau eine Stufe. Die Stufe gehört zum Eintrag, nicht zur Aufgabe: Dieselbe Aufgabe kann diese Woche Pflicht und nächste Woche Bonus sein.
-- **R-2 \[Annahme\]** Fortschritt Pflicht = erledigte Pflicht-Einträge geteilt durch alle Pflicht-Einträge des Zeitraums. Fortschritt gesamt = alle erledigten durch alle Einträge. Gezählt wird nach Anzahl, nicht nach Dauer.
+- **R-2 \[Entscheid\]** Fortschritt Pflicht = erledigte Pflicht-Einträge geteilt durch alle Pflicht-Einträge des Zeitraums. Fortschritt gesamt = alle erledigten durch alle Einträge. Gezählt wird nach Anzahl, nicht nach Dauer.
 - **R-3** „Minimum erreicht“ wird angezeigt, sobald es mindestens einen Pflicht-Eintrag gibt und alle erledigt sind.
 - **R-4** Der Wochenfortschritt zählt die Wochen-Einträge und alle Tages-Einträge dieser Woche zusammen.
 
@@ -72,7 +72,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **R-5** Eine Aufgabe aus dem Backlog wird einem Tag oder einer Woche mit einer Stufe zugewiesen. Dabei entsteht ein Eintrag.
 - **R-6** Ein Wochen-Eintrag kann einem Tag zugewiesen werden. Er wird dabei zum Tages-Eintrag (nicht kopiert); die Stufe bleibt, ausser sie wird geändert.
 - **R-7** Abhaken setzt den Eintrag auf erledigt; das ist jederzeit rückgängig zu machen.
-- **R-8 \[Annahme\]** „Aus Zeitraum entfernen“ löscht nur den Eintrag; die Aufgabe geht zurück in den Backlog. „Aufgabe löschen“ entfernt sie endgültig, mit kurzer Rückgängig-Möglichkeit.
+- **R-8 \[Entscheid\]** „Aus Zeitraum entfernen“ löscht nur den Eintrag; die Aufgabe geht zurück in den Backlog. „Aufgabe löschen“ entfernt sie endgültig, mit kurzer Rückgängig-Möglichkeit.
 
 ### Übertragung unerledigter Einträge
 
@@ -108,7 +108,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **V-4 Backlog:** Liste aller Aufgaben ohne offenen Eintrag, mit Suche und Tag-Filter. Von hier aus Zuweisen zu Tag oder Woche inklusive Stufe.
 - **V-5 Serien:** Liste aller Serien; bearbeiten, beenden, `carry_over` umschalten.
 - **V-6 Einstellungen:** Google-Verbindung und Sync-Status, Kalenderauswahl, Zeitzone, Sync-Intervall, Theme, Backup (Kopie der Datenbankdatei erstellen).
-- **V-7 Schnellerfassung:** Ein Tastenkürzel öffnet in jeder Ansicht eine Eingabezeile. Titel eingeben, Enter. In Heute, Woche und Monat entsteht ein Eintrag für den angezeigten Tag, im Backlog eine Aufgabe ohne Zeitraum. **\[Annahme\]** Standardstufe ist Pflicht, per Tastenkürzel umschaltbar. `#name` im Titel fügt einen Tag hinzu. Details (Stufe, Zeitraum, Dauer, Notiz, Tags, Uhrzeit, Wiederholung) im erweiterten Dialog.
+- **V-7 Schnellerfassung:** Ein Tastenkürzel öffnet in jeder Ansicht eine Eingabezeile. Titel eingeben, Enter. In Heute, Woche und Monat entsteht ein Eintrag für den angezeigten Tag, im Backlog eine Aufgabe ohne Zeitraum. **\[Entscheid\]** Standardstufe ist Pflicht, per Tastenkürzel umschaltbar. `#name` im Titel fügt einen Tag hinzu. Details (Stufe, Zeitraum, Dauer, Notiz, Tags, Uhrzeit, Wiederholung) im erweiterten Dialog.
 - **V-8 Wiederholung erfassen:** Wie in Kalender-Apps: „Wiederholt sich“ → Rhythmus, Intervall, Wochentage, Ende (nie / am Datum / nach n Mal), mit Vorschau der nächsten Vorkommen.
 
 ## 7. Google-Calendar-Sync
@@ -138,7 +138,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 ## 9. Technik
 
 - **T-1 \[Entscheid\]** Backend in Python mit FastAPI und SQLite, lokal betrieben. Frontend im Browser.
-- **T-2 \[Annahme\]** Frontend mit Svelte (Vite), das über eine JSON-Schnittstelle mit dem Backend spricht. Das ist der einzige Punkt mit Webentwicklungs-Werkzeugen; Alternative siehe A-1.
+- **T-2 \[Entscheid\]** Frontend mit Svelte (Vite), das über eine JSON-Schnittstelle mit dem Backend spricht. Das ist der einzige Punkt mit Webentwicklungs-Werkzeugen (Node.js/npm nur zum Entwickeln und Bauen).
 - **T-3:** Der Server hört nur auf `127.0.0.1`, ist also von aussen nicht erreichbar. Eine Anmeldung ist deshalb nicht nötig.
 - **T-4:** Start mit einem einzigen Befehl (oder Skript), der die App im Browser öffnet.
 - **T-5:** Die fachliche Logik (Übertragung, Serien, Fortschritt, Sync-Regeln) steckt in reinem Code ohne Datenbank- und Google-Zugriff. Die aktuelle Uhrzeit wird von aussen übergeben, damit sich Tageswechsel testen lassen.
@@ -170,11 +170,11 @@ Jeder Meilenstein ist für sich benutzbar. „Fertig, wenn“ gilt als Abnahmekr
 
 Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 
-- **A-1 Frontend:** Svelte (T-2) ist ein Vorschlag. Alternativ ein einfacheres Frontend nur mit Seitenvorlagen im Python-Backend (weniger Werkzeuge, aber weniger komfortables Drag & Drop).
+- **A-1 Frontend:** *Erledigt (v0.2):* Svelte mit Vite bestätigt (T-2).
 - **A-2 „Zurück in den Backlog“ (S-8):** Ich lege es so aus, dass der Eintrag seine Uhrzeit verliert, aber mit seinem Tag und seiner Stufe bestehen bleibt („nicht eingeplant“). Die Alternative wäre, dass die Aufgabe ganz in den Backlog zurückfällt und Tag und Stufe verliert. **Bitte bestätigen.**
-- **A-3 Standardstufe:** Die Schnellerfassung legt Einträge standardmässig als Pflicht an (V-7).
+- **A-3 Standardstufe:** *Erledigt (v0.2):* Die Schnellerfassung legt Einträge standardmässig als Pflicht an (V-7).
 - **A-4 Block bei Übertragung:** Der alte Block wird gelöscht (R-12). Alternative: Er bleibt als Vergangenheit stehen.
-- **A-5 Fortschritt:** Zählung nach Anzahl, nicht nach Dauer (R-2).
+- **A-5 Fortschritt:** *Erledigt (v0.2):* Zählung nach Anzahl, nicht nach Dauer (R-2).
 - **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
 - **A-7 Berechtigungen und Anmeldung:** Die Bezeichnungen der Google-Berechtigungen und das Verhalten der Anmeldung im Testmodus (Ablauf der Zugangstokens) werden in M4 gegen die aktuelle Google-Dokumentation geprüft.
 - **A-8 Serien in Google:** Einzelne Ereignisse statt Google-Serien (S-11).
@@ -189,3 +189,4 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 ## 14. Entscheidungs- und Änderungsprotokoll
 
 - **31.10.2026, v0.1:** Erstfassung aus dem Brainstorming. Entschieden: Pflicht/Bonus pro Tag und Woche; Übertragung unerledigter Einträge mit Vermerk „überfällig“ (Tag und Woche), bei Serien standardmässig nicht; lokal und kostenlos; Zwei-Wege-Sync nur für Blöcke, Fremdtermine nur lesen; Blöcke in eigenem Kalender; Verschieben in Google wird übernommen; optionale Tags; Serien mit Endbedingungen; Optimierer, Heimnetz-Zugriff und Druckansicht vorerst nicht.
+- **31.10.2026, v0.2:** Vor Beginn von M1 bestätigt: A-1 Frontend mit Svelte und Vite (T-2); A-3 Standardstufe Pflicht in der Schnellerfassung (V-7); A-5 Fortschritt nach Anzahl (R-2); R-8 Entfernen und Löschen wie beschrieben. Lücke geschlossen: Erledigte Aufgaben erscheinen nicht im Backlog (Abschnitte 3 und 4).
