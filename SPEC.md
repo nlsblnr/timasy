@@ -191,5 +191,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 
 - **31.10.2026, v0.1:** Erstfassung aus dem Brainstorming. Entschieden: Pflicht/Bonus pro Tag und Woche; Übertragung unerledigter Einträge mit Vermerk „überfällig“ (Tag und Woche), bei Serien standardmässig nicht; lokal und kostenlos; Zwei-Wege-Sync nur für Blöcke, Fremdtermine nur lesen; Blöcke in eigenem Kalender; Verschieben in Google wird übernommen; optionale Tags; Serien mit Endbedingungen; Optimierer, Heimnetz-Zugriff und Druckansicht vorerst nicht.
 - **31.10.2026, v0.2:** Vor Beginn von M1 bestätigt: A-1 Frontend mit Svelte und Vite (T-2); A-3 Standardstufe Pflicht in der Schnellerfassung (V-7); A-5 Fortschritt nach Anzahl (R-2); R-8 Entfernen und Löschen wie beschrieben. Lücke geschlossen: Erledigte Aufgaben erscheinen nicht im Backlog (Abschnitte 3 und 4).
-- **01.11.2026:** M1 abgenommen.
-- **01.11.2026, v0.3:** Vor Beginn von M2 bestätigt: A-4/R-12 alter Block wird bei Übertragung gelöscht; R-19 und R-21 bestätigt. Neu R-23: Block auf anderen Tag verschieben nimmt den Eintrag mit; Überschneidungen eigener Blöcke erlaubt. V-2: Raster 15 Minuten, Zeitachse 0–24 Uhr, Start bei 7 Uhr.
+- **31.10.2026:** M1 abgenommen.
+- **31.10.2026, v0.3:** Vor Beginn von M2 bestätigt: A-4/R-12 alter Block wird bei Übertragung gelöscht; R-19 und R-21 bestätigt. Neu R-23: Block auf anderen Tag verschieben nimmt den Eintrag mit; Überschneidungen eigener Blöcke erlaubt. V-2: Raster 15 Minuten, Zeitachse 0–24 Uhr, Start bei 7 Uhr.
