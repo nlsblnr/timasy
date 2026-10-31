@@ -46,3 +46,14 @@ cd frontend && npm install && npm run build && cd ..
 - Tageswechsel simulieren: `TIMASY_TODAY=2026-11-05 .venv/bin/python run.py`
 - Andere Datenbankdatei (z.B. zum Ausprobieren): `TIMASY_DB=/tmp/test.db .venv/bin/python run.py`
 - Daten liegen in `data/timasy.db` (nicht im Repository).
+
+Unter Windows (PowerShell; Befehle einzeln ausführen, ältere PowerShell kennt kein `&&`):
+```powershell
+py -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+cd frontend; npm install; npm run build; cd ..
+.venv\Scripts\python run.py
+```
+- Tests: `.venv\Scripts\python -m pytest`
+- Tageswechsel simulieren: `$env:TIMASY_TODAY="2026-11-05"; .venv\Scripts\python run.py` (danach `Remove-Item Env:TIMASY_TODAY`)
+- Blockiert PowerShell `npm` (Ausführungsrichtlinie), `npm.cmd` verwenden.
