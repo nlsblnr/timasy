@@ -17,3 +17,15 @@ def normalize_period_start(scope: Scope, d: date) -> date:
 def week_days(monday: date) -> list[date]:
     """Die sieben Tage einer Woche, Montag bis Sonntag."""
     return [monday + timedelta(days=i) for i in range(7)]
+
+
+def month_weeks(year: int, month: int) -> list[list[date]]:
+    """Monatsraster (V-3): ganze Wochen von Montag bis Sonntag, die den Monat abdecken."""
+    first = date(year, month, 1)
+    next_month = date(year + (month == 12), month % 12 + 1, 1)
+    weeks = []
+    monday = week_start(first)
+    while monday < next_month:
+        weeks.append(week_days(monday))
+        monday += timedelta(days=7)
+    return weeks

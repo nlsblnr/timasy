@@ -7,6 +7,7 @@ import sqlite3
 from datetime import date, datetime
 from typing import Iterable
 
+from ..domain.blocks import Block
 from ..domain.models import Entry, Scope, Status, Tier
 from ..domain.tags import normalize_tag
 
@@ -182,3 +183,66 @@ def open_entries_before(conn, day: date) -> list[Entry]:
         (day.isoformat(),),
     ).fetchall()
     return [_to_entry(r) for r in rows]
+
+
+# --- Blöcke ------------------------------------------------------------------
+
+def _to_block(row) -> Block:
+    def dt(v):
+        return datetime.fromisoformat(v) if v else None
+    return Block(
+        id=row["id"],
+        entry_id=row["entry_id"],
+        start=dt(row["start"]),
+        end=dt(row["end"]),
+        google_event_id=row["google_event_id"],
+        local_updated_at=dt(row["local_updated_at"]),
+        last_synced_at=dt(row["last_synced_at"]),
+    )
+
+
+def _block_values(b: Block) -> dict:
+    def iso(v):
+        return v.isoformat() if v else None
+    return {
+        "entry_id": b.entry_id,
+        "start": iso(b.start),
+        "end": iso(b.end),
+        "google_event_id": b.google_event_id,
+        "local_updated_at": iso(b.local_updated_at),
+        "last_synced_at": iso(b.last_synced_at),
+    }
+
+
+def insert_block(conn, b: Block) -> int:
+    v = _block_values(b)
+    return conn.execute(
+        'INSERT INTO block (entry_id, start, "end", google_event_id, local_updated_at, '
+        "last_synced_at) VALUES (:entry_id, :start, :end, :google_event_id, "
+        ":local_updated_at, :last_synced_at)", v).lastrowid
+
+
+def update_block(conn, b: Block) -> None:
+    conn.execute(
+        'UPDATE block SET entry_id = :entry_id, start = :start, "end" = :end, '
+        "google_event_id = :google_event_id, local_updated_at = :local_updated_at, "
+        "last_synced_at = :last_synced_at WHERE id = :id", {**_block_values(b), "id": b.id})
+
+
+def get_block(conn, block_id: int) -> Block | None:
+    row = conn.execute("SELECT * FROM block WHERE id = ?", (block_id,)).fetchone()
+    return _to_block(row) if row else None
+
+
+def delete_block(conn, block_id: int) -> None:
+    conn.execute("DELETE FROM block WHERE id = ?", (block_id,))
+
+
+def blocks_for_entries(conn, entry_ids: Iterable[int]) -> dict[int, Block]:
+    """Blöcke nach entry_id; Einträge ohne Block fehlen im Ergebnis."""
+    ids = list(set(entry_ids))
+    if not ids:
+        return {}
+    marks = ",".join("?" * len(ids))
+    rows = conn.execute(f"SELECT * FROM block WHERE entry_id IN ({marks})", ids).fetchall()
+    return {r["entry_id"]: _to_block(r) for r in rows}

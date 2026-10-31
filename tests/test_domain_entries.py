@@ -114,3 +114,12 @@ def test_done_task_is_not_in_backlog():
 def test_task_with_only_missed_entries_is_in_backlog():
     # "verpasst" (Serien, R-13) zählt weder als offen noch als erledigt
     assert is_in_backlog([entry(status=Status.MISSED)]) is True
+
+
+def test_month_weeks():
+    from backend.domain.periods import month_weeks
+    weeks = month_weeks(2026, 11)  # 1.11.2026 ist ein Sonntag
+    assert weeks[0][0] == date(2026, 10, 26)
+    assert weeks[-1][-1] == date(2026, 12, 6)
+    assert all(len(w) == 7 for w in weeks)
+    assert len(weeks) == 6

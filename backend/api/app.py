@@ -51,7 +51,20 @@ class EntryIn(BaseModel):
 class EntryPatch(BaseModel):
     done: bool | None = None
     tier: Tier | None = None
-    day: dt.date | None = None       # Wochen-Eintrag einem Tag zuweisen (R-6)
+    day: dt.date | None = None       # auf einen Tag legen (bei Wochen-Einträgen R-6)
+
+
+class ScheduleIn(BaseModel):
+    """Zeit als Tag + Minuten seit Mitternacht in Ortszeit, z.B. 9:15 = 555."""
+    day: dt.date
+    start_minute: int
+    end_minute: int | None = None    # ohne Ende: Standarddauer (R-21)
+
+
+class BlockPatch(BaseModel):
+    day: dt.date
+    start_minute: int
+    end_minute: int
 
 
 # --- App ---------------------------------------------------------------------
@@ -142,13 +155,47 @@ def create_app(db_path: Path | str) -> FastAPI:
     @app.patch("/api/entries/{entry_id}")
     def patch_entry(entry_id: int, body: EntryPatch, conn: sqlite3.Connection = Depends(get_conn)):
         def do():
-            e = services.change_entry(conn, entry_id, clock.now(), body.done, body.tier, body.day)
+            e = services.change_entry(conn, entry_id, clock.now(), clock.today(),
+                                      body.done, body.tier, body.day)
             return services.entry_payloads(conn, [e], clock.today())[0]
         return run(do)
 
     @app.delete("/api/entries/{entry_id}")
     def delete_entry(entry_id: int, conn: sqlite3.Connection = Depends(get_conn)):
         run(lambda: services.remove_entry(conn, entry_id))
+        return {"ok": True}
+
+    @app.get("/api/week")
+    def get_week(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
+        today = clock.today()
+        services.roll_over(conn, today)
+        return services.week_view(conn, date or today, today)
+
+    @app.get("/api/month")
+    def get_month(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
+        today = clock.today()
+        services.roll_over(conn, today)
+        return services.month_view(conn, date or today, today)
+
+    @app.post("/api/entries/{entry_id}/schedule")
+    def post_schedule(entry_id: int, body: ScheduleIn, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            e = services.schedule_entry(conn, entry_id, body.day, body.start_minute,
+                                        body.end_minute, clock.today(), clock.now())
+            return services.entry_payloads(conn, [e], clock.today())[0]
+        return run(do)
+
+    @app.patch("/api/blocks/{block_id}")
+    def patch_block(block_id: int, body: BlockPatch, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            e = services.change_block(conn, block_id, body.day, body.start_minute,
+                                      body.end_minute, clock.today(), clock.now())
+            return services.entry_payloads(conn, [e], clock.today())[0]
+        return run(do)
+
+    @app.delete("/api/blocks/{block_id}")
+    def delete_block(block_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+        run(lambda: services.remove_block(conn, block_id))
         return {"ok": True}
 
     # Das gebaute Frontend (npm run build) unter "/" ausliefern.

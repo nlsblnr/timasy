@@ -46,6 +46,18 @@ MIGRATIONS: list[str] = [
     CREATE INDEX entry_task   ON entry (task_id);
     CREATE INDEX entry_status ON entry (status);
     """,
+    # 2: Blöcke (M2) – höchstens ein Block pro Eintrag
+    """
+    CREATE TABLE block (
+        id               INTEGER PRIMARY KEY,
+        entry_id         INTEGER NOT NULL UNIQUE REFERENCES entry(id) ON DELETE CASCADE,
+        start            TEXT    NOT NULL,      -- ISO-Zeit mit Zeitzone
+        "end"            TEXT    NOT NULL,      -- "end" ist in SQL ein Schlüsselwort
+        google_event_id  TEXT,                  -- ab M5
+        local_updated_at TEXT,
+        last_synced_at   TEXT
+    );
+    """,
 ]
 
 
