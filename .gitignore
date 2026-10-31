@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Lokale Daten (Datenbank, Backups)
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Google-Zugangsdaten und Tokens: nie ins Repository (T-8)
+credentials*.json
+client_secret*.json
+token*.json
+secrets/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
