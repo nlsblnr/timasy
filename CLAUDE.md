@@ -11,6 +11,7 @@ Die verbindliche Spezifikation liegt in `SPEC.md`. Lies sie vollständig, bevor 
 - Ändere die Spezifikation nie stillschweigend. Schlage Änderungen vor; bestätigte trägst du im Änderungsprotokoll (Abschnitt 14) ein.
 - Arbeite in kleinen Schritten. Sag nach jedem Schritt kurz, was sich geändert hat und wie ich es ausprobieren kann.
 - Ich will den Code verstehen und selbst anpassen können: einfache, lesbare Lösungen vor cleveren; neue Konzepte kurz erklären.
+- Arbeite direkt auf dem Branch `main` (keine eigenen Branches), committe in kleinen Schritten und pushe nach `main`.
 
 ## Rahmen (nicht verhandelbar)
 - Rein lokal, ein Nutzer, kein Server, keine kostenpflichtigen Dienste oder APIs (D-1, D-2). Keine Abhängigkeiten, die Kosten verursachen.
