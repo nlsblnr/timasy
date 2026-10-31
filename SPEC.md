@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.2 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.3 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -79,7 +79,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **R-9 \[Entscheid\]** Beim ersten Start der App an einem neuen Tag (und beim Tageswechsel, solange sie läuft) werden alle offenen Tages-Einträge vergangener Tage auf den heutigen Tag übertragen (Vorkommen von Serien: siehe R-13). Die Stufe bleibt: Unerledigte Pflicht-Einträge bleiben Pflicht, unerledigte Bonus-Einträge bleiben Bonus. Lag die App mehrere Tage still, landen sie ebenfalls auf heute.
 - **R-10 \[Entscheid\]** Übertragene Einträge tragen den Vermerk „überfällig“. `overdue_since` behält das ursprüngliche Datum, auch bei mehrfacher Übertragung; angezeigt wird „überfällig seit n Tagen“.
 - **R-11 \[Entscheid\]** Dasselbe gilt für Wochen: Offene Wochen-Einträge vergangener Wochen werden in die aktuelle Woche übertragen, Stufe bleibt, Vermerk „überfällig“.
-- **R-12 \[Annahme\]** Hatte ein übertragener Eintrag einen Block, wird dieser Block gelöscht (auch der Kalendereintrag in Google). Der Eintrag ist am neuen Tag zunächst nicht eingeplant.
+- **R-12 \[Entscheid\]** Hatte ein übertragener Eintrag einen Block, wird dieser Block gelöscht (auch der Kalendereintrag in Google). Der Eintrag ist am neuen Tag zunächst nicht eingeplant.
 - **R-13 \[Entscheid\]** Vorkommen einer Serie werden standardmässig nicht übertragen: Ein offenes Vorkommen eines vergangenen Tages wird auf `missed` (verpasst) gesetzt. Pro Serie einstellbar über `carry_over`.
 
 ### Wiederholung
@@ -92,9 +92,10 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 ### Blöcke
 
-- **R-19 \[Annahme\]** Ein Block liegt innerhalb eines Tages (keine Ganztags- oder Mitternachts-Blöcke) und gehört zu genau einem Tages-Eintrag. Ein Wochen-Eintrag muss erst einem Tag zugewiesen werden (R-6).
+- **R-19 \[Entscheid\]** Ein Block liegt innerhalb eines Tages (keine Ganztags- oder Mitternachts-Blöcke) und gehört zu genau einem Tages-Eintrag. Ein Wochen-Eintrag muss erst einem Tag zugewiesen werden (R-6).
 - **R-20** Überschneidet sich ein Block mit einem Fremdtermin, ist das erlaubt, wird aber sichtbar markiert.
-- **R-21 \[Annahme\]** Neue Blöcke übernehmen als Dauer `estimated_minutes`, sonst 30 Minuten.
+- **R-21 \[Entscheid\]** Neue Blöcke übernehmen als Dauer `estimated_minutes`, sonst 30 Minuten.
+- **R-23 \[Entscheid\]** Wird ein Block auf einen anderen Tag verschoben, wandert sein Eintrag mit auf diesen Tag (R-19: Ein Block liegt immer am Tag seines Eintrags). Eigene Blöcke dürfen sich überschneiden; sie werden nebeneinander dargestellt.
 
 ### Tags
 
@@ -103,7 +104,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 ## 6. Ansichten und Bedienung
 
 - **V-1 Heute (Startseite):** Oben Datum und Fortschritt (Pflicht-Balken prominent, Gesamt-Balken dezent) sowie der Hinweis „Minimum erreicht“. Darunter die Pflicht-Liste, dann die Bonus-Liste. Überfällige Einträge tragen den Vermerk aus R-10 in ruhiger Farbe. Daneben eine Tages-Zeitleiste mit Fremdterminen (grau) und Blöcken (Akzentfarbe). Nicht eingeplante Einträge lassen sich per Drag & Drop auf die Zeitleiste ziehen. Eine kleine Leiste „Diese Woche“ zeigt offene Wochen-Einträge, die sich einem Tag zuweisen lassen.
-- **V-2 Woche:** Raster Montag bis Sonntag mit Zeitachse. Fremdtermine sind nur lesbar; Blöcke lassen sich verschieben und in der Länge ändern. Eine Seitenleiste listet Wochen-Einträge (nach Stufe) und nicht eingeplante Tages-Einträge; sie lassen sich auf einen Tag (zuweisen) oder auf eine Uhrzeit (Block anlegen) ziehen. Oben der Wochenfortschritt.
+- **V-2 Woche:** Raster Montag bis Sonntag mit Zeitachse. Fremdtermine sind nur lesbar; Blöcke lassen sich verschieben und in der Länge ändern (Raster 15 Minuten). Die Zeitachse zeigt 0 bis 24 Uhr und ist beim Öffnen auf 7 Uhr gescrollt; dasselbe gilt für die Tages-Zeitleiste in V-1. Eine Seitenleiste listet Wochen-Einträge (nach Stufe) und nicht eingeplante Tages-Einträge; sie lassen sich auf einen Tag (zuweisen) oder auf eine Uhrzeit (Block anlegen) ziehen. Oben der Wochenfortschritt.
 - **V-3 Monat:** Monatsraster. Pro Tag eine dezente Zahl offener Pflicht-Einträge und kleine Striche für Termine. Klick öffnet den Tag. Vor- und Zurückblättern.
 - **V-4 Backlog:** Liste aller Aufgaben ohne offenen Eintrag, mit Suche und Tag-Filter. Von hier aus Zuweisen zu Tag oder Woche inklusive Stufe.
 - **V-5 Serien:** Liste aller Serien; bearbeiten, beenden, `carry_over` umschalten.
@@ -173,7 +174,7 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **A-1 Frontend:** *Erledigt (v0.2):* Svelte mit Vite bestätigt (T-2).
 - **A-2 „Zurück in den Backlog“ (S-8):** Ich lege es so aus, dass der Eintrag seine Uhrzeit verliert, aber mit seinem Tag und seiner Stufe bestehen bleibt („nicht eingeplant“). Die Alternative wäre, dass die Aufgabe ganz in den Backlog zurückfällt und Tag und Stufe verliert. **Bitte bestätigen.**
 - **A-3 Standardstufe:** *Erledigt (v0.2):* Die Schnellerfassung legt Einträge standardmässig als Pflicht an (V-7).
-- **A-4 Block bei Übertragung:** Der alte Block wird gelöscht (R-12). Alternative: Er bleibt als Vergangenheit stehen.
+- **A-4 Block bei Übertragung:** *Erledigt (v0.3):* Der alte Block wird gelöscht (R-12).
 - **A-5 Fortschritt:** *Erledigt (v0.2):* Zählung nach Anzahl, nicht nach Dauer (R-2).
 - **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
 - **A-7 Berechtigungen und Anmeldung:** Die Bezeichnungen der Google-Berechtigungen und das Verhalten der Anmeldung im Testmodus (Ablauf der Zugangstokens) werden in M4 gegen die aktuelle Google-Dokumentation geprüft.
@@ -190,3 +191,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 
 - **31.10.2026, v0.1:** Erstfassung aus dem Brainstorming. Entschieden: Pflicht/Bonus pro Tag und Woche; Übertragung unerledigter Einträge mit Vermerk „überfällig“ (Tag und Woche), bei Serien standardmässig nicht; lokal und kostenlos; Zwei-Wege-Sync nur für Blöcke, Fremdtermine nur lesen; Blöcke in eigenem Kalender; Verschieben in Google wird übernommen; optionale Tags; Serien mit Endbedingungen; Optimierer, Heimnetz-Zugriff und Druckansicht vorerst nicht.
 - **31.10.2026, v0.2:** Vor Beginn von M1 bestätigt: A-1 Frontend mit Svelte und Vite (T-2); A-3 Standardstufe Pflicht in der Schnellerfassung (V-7); A-5 Fortschritt nach Anzahl (R-2); R-8 Entfernen und Löschen wie beschrieben. Lücke geschlossen: Erledigte Aufgaben erscheinen nicht im Backlog (Abschnitte 3 und 4).
+- **01.11.2026:** M1 abgenommen.
+- **01.11.2026, v0.3:** Vor Beginn von M2 bestätigt: A-4/R-12 alter Block wird bei Übertragung gelöscht; R-19 und R-21 bestätigt. Neu R-23: Block auf anderen Tag verschieben nimmt den Eintrag mit; Überschneidungen eigener Blöcke erlaubt. V-2: Raster 15 Minuten, Zeitachse 0–24 Uhr, Start bei 7 Uhr.
