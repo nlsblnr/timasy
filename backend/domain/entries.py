@@ -30,6 +30,20 @@ def assign_to_day(entry: Entry, day: date, tier: Tier | None = None) -> Entry:
     return replace(entry, scope=Scope.DAY, period_start=day, tier=tier or entry.tier)
 
 
+def move_entry_to_day(entry: Entry, day: date, today: date) -> Entry:
+    """Eintrag auf einen Tag legen, z.B. per Drag & Drop (V-2, R-23).
+
+    Ein Wochen-Eintrag wird dabei zum Tages-Eintrag (R-6). Offene Einträge
+    dürfen nicht auf einen vergangenen Tag: Die Übertragung (R-9) würde sie
+    sonst sofort als überfällig auf heute zurückholen.
+    """
+    if entry.status == Status.OPEN and day < today:
+        raise ValueError("Offene Einträge können nicht auf einen vergangenen Tag gelegt werden.")
+    if entry.scope == Scope.WEEK:
+        return assign_to_day(entry, day)
+    return replace(entry, period_start=day)
+
+
 def mark_done(entry: Entry, now: datetime) -> Entry:
     """R-7: abhaken."""
     return replace(entry, status=Status.DONE, done_at=now)
