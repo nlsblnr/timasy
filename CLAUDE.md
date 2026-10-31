@@ -30,4 +30,19 @@ Die verbindliche Spezifikation liegt in `SPEC.md`. Lies sie vollständig, bevor 
 Klär die Punkte aus Abschnitt 12 mit mir, bevor du den betroffenen Meilenstein beginnst, insbesondere A-1 (Frontend) und A-2 (Löschen eines Blocks in Google).
 
 ## Befehle
-Noch leer. Trage hier die Befehle zum Starten, Testen und Prüfen ein, sobald das Projekt aufgesetzt ist, und halte den Abschnitt aktuell.
+Halte diesen Abschnitt aktuell.
+
+Einmalig einrichten (Python 3.11+ und Node.js 20.19+ nötig):
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt      # Windows: .venv\Scripts\pip
+cd frontend && npm install && npm run build && cd ..
+```
+
+- Starten (öffnet den Browser, http://127.0.0.1:8765): `.venv/bin/python run.py`
+- Tests: `.venv/bin/python -m pytest`
+- Frontend neu bauen nach Änderungen: `cd frontend && npm run build`
+- Frontend entwickeln mit Live-Neuladen: Backend mit `run.py` starten, dann `cd frontend && npm run dev` (http://127.0.0.1:5173)
+- Tageswechsel simulieren: `TIMASY_TODAY=2026-11-05 .venv/bin/python run.py`
+- Andere Datenbankdatei (z.B. zum Ausprobieren): `TIMASY_DB=/tmp/test.db .venv/bin/python run.py`
+- Daten liegen in `data/timasy.db` (nicht im Repository).

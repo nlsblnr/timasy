@@ -1,0 +1,89 @@
+/* Grundgestaltung (UX-2): ruhig, Systemschrift, ein Akzentfarbton,
+   Hell- und Dunkelmodus nach Systemeinstellung. Feinschliff folgt in M6. */
+
+:root {
+  --accent: #3f6ad8;
+  --text: #1b1c1f;
+  --muted: #6b6f78;
+  --calm: #8a6d3b;          /* "überfällig": sachlich, keine Warnfarbe (UX-5) */
+  --bg: #fbfbfd;
+  --surface: #f1f2f6;
+  --surface-raised: #ffffff;
+  --line: #e6e7ec;
+  --track: #e6e7ec;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --inverse: #2e3036;
+  --inverse-text: #f2f2f5;
+  --inverse-accent: #a9c0ff;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #a9c0ff;
+    --text: #e4e5ea;
+    --muted: #979ba5;
+    --calm: #c9b07e;
+    --bg: #131417;
+    --surface: #1d1f24;
+    --surface-raised: #24262c;
+    --line: #2c2f36;
+    --track: #2c2f36;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --inverse: #e4e5ea;
+    --inverse-text: #1b1c1f;
+    --inverse-accent: #3f6ad8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+input[type="text"], input[type="search"], input[type="number"], input[type="date"],
+select, textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+label { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+
+input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+
+button { cursor: pointer; border: none; background: none; border-radius: 99px; padding: 6px 12px; }
+button.filled { background: var(--accent); color: var(--bg); font-weight: 600; }
+button.text { color: var(--accent); }
+button.text:hover, button.icon:hover, button.tab:hover { background: var(--surface); }
+button.icon, summary.icon { font-size: 1.3rem; line-height: 1; padding: 4px 10px; border-radius: 99px; }
+button.tab { color: var(--muted); }
+button.tab.active { color: var(--text); background: var(--surface); font-weight: 600; }
+
+.chip {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+  background: var(--surface);
+}
+.chip.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+kbd {
+  font-family: inherit; font-size: 0.85em; padding: 0 6px;
+  border: 1px solid var(--line); border-radius: 4px;
+}

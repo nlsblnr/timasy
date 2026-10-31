@@ -8,7 +8,10 @@ from .migrations import migrate
 def connect(path: Path | str) -> sqlite3.Connection:
     if str(path) != ":memory:":
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    # check_same_thread=False: FastAPI öffnet die Verbindung in einem anderen
+    # Thread, als es die Anfrage bearbeitet. Das ist hier unproblematisch, weil
+    # jede Anfrage ihre eigene Verbindung bekommt und sie nie geteilt wird.
+    conn = sqlite3.connect(path, check_same_thread=False)
     conn.row_factory = sqlite3.Row             # Zeilen wie ein dict lesen: row["title"]
     conn.execute("PRAGMA foreign_keys = ON")   # ON DELETE CASCADE aktivieren
     return conn

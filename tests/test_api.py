@@ -168,3 +168,13 @@ def test_validation(client):
     assert client.post("/api/quick", json={"text": "  #nurtag "}).status_code == 400
     assert client.patch("/api/entries/999", json={"done": True}).status_code == 404
     assert client.put("/api/tasks/999", json={"title": "x"}).status_code == 404
+
+
+def test_quick_with_details(client):
+    # V-7: erweiterter Dialog
+    r = quick(client, "Steuererklärung #finanzen", date="2026-11-04", tier="bonus",
+              notes="Belege sammeln", estimated_minutes=90, tags=["Wichtig", "finanzen"])
+    assert r["task"]["notes"] == "Belege sammeln"
+    assert r["task"]["estimated_minutes"] == 90
+    assert r["task"]["tags"] == ["finanzen", "wichtig"]
+    assert r["entry"]["tier"] == "bonus"

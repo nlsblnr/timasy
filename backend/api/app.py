@@ -28,6 +28,10 @@ class QuickIn(BaseModel):
     tier: Tier = Tier.MUST           # Standardstufe Pflicht (V-7)
     scope: Scope = Scope.DAY
     date: dt.date | None = None      # ohne Datum: Aufgabe im Backlog
+    # aus dem erweiterten Dialog (V-7)
+    notes: str = ""
+    estimated_minutes: int | None = Field(default=None, ge=1)
+    tags: list[str] = []
 
 
 class TaskIn(BaseModel):
@@ -99,7 +103,8 @@ def create_app(db_path: Path | str) -> FastAPI:
     def post_quick(body: QuickIn, conn: sqlite3.Connection = Depends(get_conn)):
         def do():
             task_id, entry = services.quick_capture(
-                conn, body.text, clock.now(), body.tier, body.scope, body.date)
+                conn, body.text, clock.now(), body.tier, body.scope, body.date,
+                body.notes, body.estimated_minutes, body.tags)
             return {
                 "task": services.task_payload(conn, task_id),
                 "entry": services.entry_payloads(conn, [entry], clock.today())[0] if entry else None,

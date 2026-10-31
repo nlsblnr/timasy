@@ -155,10 +155,15 @@ def remove_entry(conn, entry_id: int) -> None:
 
 
 def quick_capture(conn, text: str, now: datetime, tier: Tier = Tier.MUST,
-                  scope: Scope = Scope.DAY, day: date | None = None) -> tuple[int, Entry | None]:
-    """V-7: Mit Datum entsteht ein Eintrag, ohne Datum eine Aufgabe im Backlog."""
+                  scope: Scope = Scope.DAY, day: date | None = None, notes: str = "",
+                  estimated_minutes: int | None = None,
+                  extra_tags: list[str] = ()) -> tuple[int, Entry | None]:
+    """V-7: Mit Datum entsteht ein Eintrag, ohne Datum eine Aufgabe im Backlog.
+
+    notes, estimated_minutes und extra_tags kommen aus dem erweiterten Dialog.
+    """
     title, tags = parse_quick_input(text)
-    task_id = create_task(conn, title, now, tags=tags)
+    task_id = create_task(conn, title, now, notes, estimated_minutes, [*tags, *extra_tags])
     entry = create_entry(conn, task_id, scope, day, tier) if day else None
     return task_id, entry
 
