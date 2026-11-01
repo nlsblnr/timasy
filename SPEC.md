@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.3 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.4 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -86,9 +86,15 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 - **R-14 \[Entscheid\]** Muster: täglich, wöchentlich (Wochentage wählbar), monatlich (am n-ten Tag des Monats oder am n-ten Wochentag, z.B. erster Montag), jährlich; jeweils „alle n Einheiten“.
 - **R-15 \[Entscheid\]** Ende: nie, an einem Datum (einschliesslich) oder nach n Vorkommen. Beispiele: „jede Woche bis am 29. Dezember“, „nur 14 Mal“.
-- **R-16 \[Annahme\]** Aus einer Serie werden Einträge für die nächsten 90 Tage erzeugt; beim Start und beim Tageswechsel wird nachgezogen. Eine Serie hat Stufe, Zeitraum (Tag oder Woche) und optional eine feste Uhrzeit mit Dauer. Mit Uhrzeit entsteht pro Vorkommen ein Block.
+- **R-16 \[Entscheid\]** Aus einer Serie werden Einträge für die nächsten 90 Tage erzeugt; beim Start und beim Tageswechsel wird nachgezogen. Eine Serie hat Stufe, Zeitraum (Tag oder Woche) und optional eine feste Uhrzeit mit Dauer. Mit Uhrzeit entsteht pro Vorkommen ein Block.
 - **R-17** Bearbeiten und Löschen wie in Kalender-Apps: **nur dieses Vorkommen** (wird zur Ausnahme und bleibt von späteren Serienänderungen unberührt), **dieses und alle folgenden** (die Serie wird geteilt), **alle** (die Serie wird geändert; offene künftige Vorkommen werden neu erzeugt, Ausnahmen bleiben).
-- **R-18 \[Annahme\]** Gibt es einen Termin in einem Monat nicht (z.B. der 31.), entfällt das Vorkommen in diesem Monat (Verhalten des Wiederholungsstandards).
+- **R-18 \[Entscheid\]** Gibt es einen Termin in einem Monat nicht (z.B. der 31.), entfällt das Vorkommen in diesem Monat (Verhalten des Wiederholungsstandards).
+- **R-24 \[Entscheid\]** Serien mit Zeitraum Woche wiederholen sich nur wöchentlich bzw. alle n Wochen; Wochentage und Uhrzeit gibt es dafür nicht. Jedes Vorkommen ist ein Wochen-Eintrag.
+- **R-25 \[Entscheid\]** Bei „nur dieses Vorkommen“ ist alles änderbar: Stufe, Tag, Uhrzeit sowie Titel, Notiz und Tags. Ändert sich der Text, erhält das Vorkommen eine eigene Kopie der Aufgabe; die übrigen Vorkommen behalten den Text der Serie.
+- **R-26 \[Entscheid\]** „Serie beenden“ (V-5) setzt das Ende auf heute: Offene Vorkommen ab morgen werden entfernt; heutige und vergangene bleiben.
+- **R-27 \[Annahme\]** Abhaken ist keine Änderung. Andere Änderungen an einem einzelnen Vorkommen ausserhalb des Serien-Dialogs (Stufe umschalten, Block ziehen, Tag ändern, Block entfernen) gelten als „nur dieses Vorkommen“. „Aus Zeitraum entfernen“ löscht nur dieses Vorkommen.
+- **R-28 \[Annahme\]** „Löschen: alle“ entfernt die Serie und alle offenen und verpassten Vorkommen; erledigte bleiben als Verlauf erhalten. „Dieses und alle folgenden“ lässt Ausnahmen (R-17) bestehen, wie bei „alle“.
+- **R-29 \[Annahme\]** Monatliche Serien wiederholen sich am Tag oder am n-ten Wochentag des Startdatums (z.B. Start Montag, 2.11. → „am 2.“ oder „am ersten Montag“), jährliche am Datum des Starts.
 
 ### Blöcke
 
@@ -179,7 +185,7 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
 - **A-7 Berechtigungen und Anmeldung:** Die Bezeichnungen der Google-Berechtigungen und das Verhalten der Anmeldung im Testmodus (Ablauf der Zugangstokens) werden in M4 gegen die aktuelle Google-Dokumentation geprüft.
 - **A-8 Serien in Google:** Einzelne Ereignisse statt Google-Serien (S-11).
-- **A-9 Planungshorizont:** 90 Tage für Serien (R-16), Fenster 30/365 Tage für Fremdtermine (S-4).
+- **A-9 Planungshorizont:** 90 Tage für Serien (R-16, *bestätigt v0.4*), Fenster 30/365 Tage für Fremdtermine (S-4).
 
 ## 13. Spätere Ideen (nicht Teil von Version 1)
 
@@ -193,3 +199,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **31.10.2026, v0.2:** Vor Beginn von M1 bestätigt: A-1 Frontend mit Svelte und Vite (T-2); A-3 Standardstufe Pflicht in der Schnellerfassung (V-7); A-5 Fortschritt nach Anzahl (R-2); R-8 Entfernen und Löschen wie beschrieben. Lücke geschlossen: Erledigte Aufgaben erscheinen nicht im Backlog (Abschnitte 3 und 4).
 - **31.10.2026:** M1 abgenommen.
 - **31.10.2026, v0.3:** Vor Beginn von M2 bestätigt: A-4/R-12 alter Block wird bei Übertragung gelöscht; R-19 und R-21 bestätigt. Neu R-23: Block auf anderen Tag verschieben nimmt den Eintrag mit; Überschneidungen eigener Blöcke erlaubt. V-2: Raster 15 Minuten, Zeitachse 0–24 Uhr, Start bei 7 Uhr.
+- **01.11.2026:** M2 abgenommen. Korrekturen: Enter speichert auch im erweiterten Dialog; Menü „⋯“ schliesst bei Klick ausserhalb.
+- **01.11.2026, v0.4:** Vor Beginn von M3: R-16, R-18 und A-9 übernommen (keine Präferenz, Vorschlag gilt). Neu: R-24 Wochen-Serien nur alle n Wochen; R-25 einzelnes Vorkommen voll änderbar; R-26 Serie beenden ab morgen. Zur Prüfung: R-27 bis R-29.
