@@ -4,6 +4,7 @@
   //  - Unterkante ziehen: Länge ändern
   //  - Einträge aus Listen hineinziehen: Block anlegen
   //  - Einträge auf den Tageskopf ziehen: nur dem Tag zuweisen (V-2)
+  //  - Fremdtermine (grau, nur lesen, S-4); ganztägige als Streifen oben
   import { onMount } from 'svelte'
   import { api } from '../lib/api.js'
   import { reload, showError } from '../lib/state.svelte.js'
@@ -13,7 +14,7 @@
     clamp, formatTime, layoutOverlaps, snap,
   } from '../lib/timegrid.js'
 
-  let { days, today, entries, showHeader = true, height = '70vh' } = $props()
+  let { days, today, entries, events = [], showHeader = true, height = '70vh' } = $props()
 
   let scroller
   let columnsEl
@@ -31,10 +32,19 @@
           ? { entry: e, id: e.id, day: drag.day, start: drag.start, end: drag.end }
           : { entry: e, id: e.id, day: e.block.day, start: e.block.start_minute, end: e.block.end_minute })
   )
+  // Fremdtermine mit Uhrzeit liegen neben den Blöcken (gemeinsame Anordnung)
+  let timedEvents = $derived(
+    events.filter((e) => !e.all_day).map((e) => ({
+      event: e, id: `ev:${e.calendar_id}:${e.id}:${e.day}`,
+      day: e.day, start: e.start_minute, end: Math.max(e.end_minute, e.start_minute + SNAP),
+    }))
+  )
+  let allDay = $derived(events.filter((e) => e.all_day))
   let columns = $derived(
     days.map((day) => {
       const items = placed.filter((p) => p.day === day)
-      return { day, items, layout: layoutOverlaps(items) }
+      const evs = timedEvents.filter((e) => e.day === day)
+      return { day, items, evs, layout: layoutOverlaps([...evs, ...items]) }
     })
   )
 
@@ -155,6 +165,19 @@
     </div>
   {/if}
 
+  {#if allDay.length}
+    <div class="allday">
+      <div class="gutter"></div>
+      {#each days as day}
+        <div class="allday-col">
+          {#each allDay.filter((e) => e.day === day) as e}
+            <div class="event-strip" title="{e.title} (ganztägig, aus Google)">{e.title}</div>
+          {/each}
+        </div>
+      {/each}
+    </div>
+  {/if}
+
   <div class="scroller" bind:this={scroller} style="height: {height}">
     <div class="body">
       <div class="gutter">
@@ -172,11 +195,24 @@
                 {formatTime(dropHint.minute)}
               </div>
             {/if}
+            {#each col.evs as ev (ev.id)}
+              {@const pos = col.layout.get(ev.id)}
+              <div class="event"
+                   style="top: {(ev.start / 60) * HOUR_PX}px;
+                          height: {((ev.end - ev.start) / 60) * HOUR_PX - 2}px;
+                          left: {(pos.lane / pos.lanes) * 100}%;
+                          width: calc({100 / pos.lanes}% - 4px)"
+                   title="{ev.event.title}, {formatTime(ev.start)}–{formatTime(ev.end)} (aus Google, nur lesen)">
+                <span class="event-title">{ev.event.title}</span>
+                <span class="block-time">{formatTime(ev.start)}–{formatTime(ev.end)}</span>
+              </div>
+            {/each}
             {#each col.items as item (item.id)}
               {@const pos = col.layout.get(item.id)}
               {@const done = item.entry.status === 'done'}
               <div
                 class="block" class:done class:dragging={drag?.entry.id === item.id}
+                class:conflict={item.entry.conflict}
                 class:short={item.end - item.start <= 30}
                 style="top: {(item.start / 60) * HOUR_PX}px;
                        height: {((item.end - item.start) / 60) * HOUR_PX - 2}px;
@@ -190,6 +226,7 @@
                          onpointerdown={(e) => e.stopPropagation()}
                          onchange={() => call(() => api.changeEntry(item.entry.id, { done: !done }))} />
                   <span class="block-title">{item.entry.title}</span>
+                  {#if item.entry.conflict}<span class="conflict-mark" title="Überschneidet sich mit einem Termin (R-20)">⚠︎</span>{/if}
                   <button class="remove" title="Block entfernen (Eintrag bleibt)"
                           aria-label="Block entfernen"
                           onpointerdown={(e) => e.stopPropagation()}
@@ -242,6 +279,22 @@
   .block-time { color: var(--muted); font-size: 0.72rem; }
   .remove { padding: 0 4px; color: var(--muted); visibility: hidden; }
   .block:hover .remove { visibility: visible; }
+  /* Fremdtermine: grau, nur lesen (V-1, V-2) */
+  .event {
+    position: absolute; margin: 1px 2px; padding: 3px 6px; overflow: hidden;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    font-size: 0.8rem; color: var(--muted); pointer-events: auto; cursor: default;
+  }
+  .event-title { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .allday { display: grid; grid-template-columns: 48px repeat(var(--cols), 1fr);
+            border-bottom: 1px solid var(--line); padding: 2px 0; }
+  .allday-col { display: grid; gap: 2px; padding: 0 2px; align-content: start; }
+  .event-strip { font-size: 0.75rem; padding: 1px 6px; border-radius: 6px; color: var(--muted);
+                 background: var(--surface); border: 1px solid var(--line);
+                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* R-20: Überschneidung sichtbar, aber ruhig */
+  .block.conflict { border-left-style: dashed; }
+  .conflict-mark { color: var(--calm); font-size: 0.75rem; }
   .resize { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; cursor: ns-resize; }
   .drop-hint {
     position: absolute; left: 2px; right: 2px; height: calc(var(--hour) / 2);

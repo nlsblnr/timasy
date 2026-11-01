@@ -11,6 +11,7 @@ from .db import repository as repo
 from .domain.blocks import (
     Block, create_block, default_duration, local_minutes, minutes_on_day, move_block,
 )
+from .domain.external import ExternalEvent, conflicting_entries, events_on_day
 from .domain.entries import assign_task, mark_done, mark_open, move_entry_to_day
 from .domain.models import Entry, Scope, Status, Tier
 from .domain.periods import month_weeks, week_days, week_start
@@ -133,8 +134,13 @@ def backlog(conn) -> list[dict]:
 
 # --- Einträge ----------------------------------------------------------------
 
-def entry_payloads(conn, entries: list[Entry], today: date) -> list[dict]:
-    """Einträge mit den Angaben ihrer Aufgabe, so wie das Frontend sie braucht."""
+def entry_payloads(conn, entries: list[Entry], today: date,
+                   conflicts: set[int] = frozenset()) -> list[dict]:
+    """Einträge mit den Angaben ihrer Aufgabe, so wie das Frontend sie braucht.
+
+    conflicts: IDs von Einträgen, deren Block sich mit einem Fremdtermin
+    überschneidet (R-20).
+    """
     ids = [e.task_id for e in entries]
     tasks = repo.tasks_by_ids(conn, ids)
     tags = repo.tags_for_tasks(conn, ids)
@@ -154,6 +160,7 @@ def entry_payloads(conn, entries: list[Entry], today: date) -> list[dict]:
             task=_task_dict(tasks[e.task_id], tags[e.task_id]),
             title=tasks[e.task_id]["title"],
             block=block_payload(blocks[e.id]) if e.id in blocks else None,
+            conflict=e.id in conflicts,
         )
         result.append(d)
     return result
@@ -317,20 +324,47 @@ def _progress_dict(p: Progress) -> dict:
     }
 
 
+def event_payload(e: ExternalEvent, day: date) -> dict:
+    """Fremdtermin für einen Tag: Minuten auf diesen Tag beschnitten (0 bis 1440)."""
+    return {
+        "calendar_id": e.calendar_id,
+        "id": e.google_event_id,
+        "title": e.title,
+        "all_day": e.all_day,
+        "day": day.isoformat(),
+        "start_minute": max(0, minutes_on_day(day, e.start)),
+        "end_minute": min(24 * 60, minutes_on_day(day, e.end)),
+    }
+
+
+def _events_by_day(conn, days: list[date]) -> dict[date, list[ExternalEvent]]:
+    events = repo.external_events_between(conn, days[0], days[-1])
+    return {d: sorted(events_on_day(events, d), key=lambda e: (not e.all_day, e.start))
+            for d in days}
+
+
+def _conflicts(conn, entries: list[Entry], events: list[ExternalEvent]) -> set[int]:
+    blocks = repo.blocks_for_entries(conn, [e.id for e in entries])
+    return conflicting_entries(blocks.values(), events)
+
+
 def day_view(conn, day: date, today: date) -> dict:
     """Daten für die Heute-Ansicht (V-1) eines beliebigen Tages."""
     monday = week_start(day)
     week_entries = repo.entries_between(conn, monday, monday + timedelta(days=6))
     day_entries = [e for e in week_entries if e.scope == Scope.DAY and e.period_start == day]
     open_week = [e for e in week_entries if e.scope == Scope.WEEK and e.status == Status.OPEN]
+    events = _events_by_day(conn, [day])[day]
+    conflicts = _conflicts(conn, day_entries, events)
     return {
         "today": today.isoformat(),
         "date": day.isoformat(),
         "week_start": monday.isoformat(),
         "progress": _progress_dict(day_progress(week_entries, day)),
         "week_progress": _progress_dict(week_progress(week_entries, day)),
-        "entries": entry_payloads(conn, day_entries, today),
+        "entries": entry_payloads(conn, day_entries, today, conflicts),
         "week_entries": entry_payloads(conn, open_week, today),
+        "events": [event_payload(e, day) for e in events],
     }
 
 
@@ -339,13 +373,17 @@ def week_view(conn, any_day: date, today: date) -> dict:
     monday = week_start(any_day)
     days = week_days(monday)
     entries = repo.entries_between(conn, monday, days[-1])
+    day_entries = [e for e in entries if e.scope == Scope.DAY]
+    by_day = _events_by_day(conn, days)
+    conflicts = _conflicts(conn, day_entries, [e for evs in by_day.values() for e in evs])
     return {
         "today": today.isoformat(),
         "week_start": monday.isoformat(),
         "days": [d.isoformat() for d in days],
         "progress": _progress_dict(week_progress(entries, monday)),
-        "entries": entry_payloads(conn, [e for e in entries if e.scope == Scope.DAY], today),
+        "entries": entry_payloads(conn, day_entries, today, conflicts),
         "week_entries": entry_payloads(conn, [e for e in entries if e.scope == Scope.WEEK], today),
+        "events": [event_payload(e, d) for d, evs in by_day.items() for e in evs],
     }
 
 
@@ -355,6 +393,7 @@ def month_view(conn, any_day: date, today: date) -> dict:
     entries = [e for e in repo.entries_between(conn, weeks[0][0], weeks[-1][-1])
                if e.scope == Scope.DAY]
     blocks = repo.blocks_for_entries(conn, [e.id for e in entries])
+    events = _events_by_day(conn, [d for week in weeks for d in week])
     open_must: dict[date, int] = {}
     block_count: dict[date, int] = {}
     for e in entries:
@@ -370,6 +409,7 @@ def month_view(conn, any_day: date, today: date) -> dict:
             "in_month": d.month == any_day.month,
             "open_must": open_must.get(d, 0),
             "blocks": block_count.get(d, 0),
+            "events": len(events[d]),
         } for d in week] for week in weeks],
     }
 

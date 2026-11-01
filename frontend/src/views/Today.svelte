@@ -1,7 +1,7 @@
 <script>
   // Heute-Ansicht (V-1): Datum, Fortschritt, Pflicht- und Bonus-Liste,
   // daneben "Diese Woche" mit offenen Wochen-Einträgen.
-  // Daneben die Tages-Zeitleiste mit Blöcken; Fremdtermine folgen in M4.
+  // Daneben die Tages-Zeitleiste mit Blöcken (Akzentfarbe) und Fremdterminen (grau).
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
   import { addDays, formatLong, formatShort, relativeLabel } from '../lib/dates.js'
@@ -90,6 +90,7 @@
       <h2>Zeitleiste</h2>
       <p class="sub">Einträge hierher ziehen, um sie einzuplanen.</p>
       <TimeGrid days={[data.date]} today={data.today} showHeader={false} height="420px"
+                events={data.events}
                 entries={data.entries.filter((e) => e.task_id !== app.pendingDelete?.taskId)} />
 
       <h2 class="weekhead">Diese Woche</h2>

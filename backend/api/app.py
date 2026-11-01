@@ -127,6 +127,7 @@ def create_app(db_path: Path | str) -> FastAPI:
         yield
 
     app = FastAPI(title="Timasy", lifespan=lifespan)
+    app.state.db_path = db_path
 
     def get_conn():
         """Eine Verbindung pro Anfrage; am Ende wird gespeichert (commit)."""

@@ -100,6 +100,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 - **R-19 \[Entscheid\]** Ein Block liegt innerhalb eines Tages (keine Ganztags- oder Mitternachts-Blöcke) und gehört zu genau einem Tages-Eintrag. Ein Wochen-Eintrag muss erst einem Tag zugewiesen werden (R-6).
 - **R-20** Überschneidet sich ein Block mit einem Fremdtermin, ist das erlaubt, wird aber sichtbar markiert.
+- **R-30 \[Annahme\]** Ganztägige Fremdtermine (z.B. Geburtstage, Ferien) gelten nicht als Überschneidung im Sinn von R-20.
 - **R-21 \[Entscheid\]** Neue Blöcke übernehmen als Dauer `estimated_minutes`, sonst 30 Minuten.
 - **R-23 \[Entscheid\]** Wird ein Block auf einen anderen Tag verschoben, wandert sein Eintrag mit auf diesen Tag (R-19: Ein Block liegt immer am Tag seines Eintrags). Eigene Blöcke dürfen sich überschneiden; sie werden nebeneinander dargestellt.
 
@@ -204,3 +205,4 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **01.11.2026:** Bestätigt: R-16, R-18, A-9, R-24, R-25 wie umgesetzt; R-27 bis R-29 als Entscheid übernommen.
 - **01.11.2026:** M3 abgenommen. Rückfrage vor dem Löschen einer Serie ergänzt.
 - **01.11.2026, v0.5:** Vor Beginn von M4 (S-4): Fremdtermine nur aus ausdrücklich gewählten Kalendern (Standard keiner), Titel und Zeiten werden gespeichert, Zeitfenster ab heute bis 90 Tage voraus (vorher: alle sichtbaren Kalender, 30 Tage zurück bis 365 voraus).
+- **01.11.2026:** Zur Prüfung: R-30 (ganztägige Termine zählen nicht als Überschneidung).

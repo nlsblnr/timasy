@@ -146,3 +146,65 @@ def test_month_view(client):
     assert days["2026-11-04"]["open_must"] == 1
     assert days["2026-11-20"]["blocks"] == 1
     assert days["2026-10-26"]["in_month"] is False
+
+
+# --- M4: Fremdtermine in den Ansichten (S-4, R-20) ---------------------------
+
+def add_event(client, title, day, start_h, end_h, all_day=False, cal="privat"):
+    """Termin direkt in den Zwischenspeicher legen (wie nach einem Abgleich)."""
+    from datetime import date as d, datetime, time
+    from backend.config import TIMEZONE
+    from backend.db import repository as repo
+    from backend.db.connection import connect
+    from backend.domain.external import ExternalEvent
+    conn = connect(client.app.state.db_path)
+    repo.save_calendars(conn, [{"id": cal, "summary": cal}])
+    repo.set_calendar_selected(conn, cal, True)
+    day = d.fromisoformat(day)
+    ev = ExternalEvent(cal, title, title,
+                       datetime.combine(day, time(start_h), TIMEZONE),
+                       datetime.combine(day, time(end_h % 24), TIMEZONE) if end_h < 24 else
+                       datetime.combine(d.fromordinal(day.toordinal() + 1), time(0), TIMEZONE),
+                       all_day)
+    repo.save_external_events(conn, [ev], set())
+    conn.commit()
+    conn.close()
+
+
+def test_events_in_day_and_week_view(client):
+    add_event(client, "Zahnarzt", "2026-11-04", 9, 10)
+    add_event(client, "Geburtstag", "2026-11-04", 0, 24, all_day=True)
+    d = client.get("/api/day").json()
+    assert [(e["title"], e["start_minute"], e["end_minute"], e["all_day"]) for e in d["events"]] == [
+        ("Geburtstag", 0, 1440, True), ("Zahnarzt", 540, 600, False)]
+    w = client.get("/api/week").json()
+    assert [e["day"] for e in w["events"] if e["title"] == "Zahnarzt"] == ["2026-11-04"]
+
+
+def test_block_overlap_is_marked(client):
+    # R-20: erlaubt, aber markiert
+    add_event(client, "Zahnarzt", "2026-11-04", 9, 10)
+    e1 = quick(client, "Überschneidet", date="2026-11-04")["entry"]
+    e2 = quick(client, "Frei", date="2026-11-04")["entry"]
+    schedule(client, e1["id"], "2026-11-04", 9 * 60 + 30)
+    schedule(client, e2["id"], "2026-11-04", 11 * 60)
+    flags = {e["title"]: e["conflict"] for e in client.get("/api/day").json()["entries"]}
+    assert flags == {"Überschneidet": True, "Frei": False}
+
+
+def test_month_counts_events(client):
+    add_event(client, "Zahnarzt", "2026-11-20", 9, 10)
+    m = client.get("/api/month", params={"date": "2026-11-15"}).json()
+    days = {d["date"]: d for w in m["weeks"] for d in w}
+    assert days["2026-11-20"]["events"] == 1
+
+
+def test_unselected_calendar_not_shown(client):
+    add_event(client, "Arbeit", "2026-11-04", 9, 10, cal="arbeit")
+    from backend.db import repository as repo
+    from backend.db.connection import connect
+    conn = connect(client.app.state.db_path)
+    repo.set_calendar_selected(conn, "arbeit", False)
+    conn.commit()
+    conn.close()
+    assert client.get("/api/day").json()["events"] == []

@@ -1,6 +1,6 @@
 <script>
   // Monatsansicht (V-3): pro Tag die Zahl offener Pflicht-Einträge und
-  // kleine Striche für eingeplante Blöcke (Fremdtermine folgen in M4).
+  // kleine Striche für Blöcke (Akzentfarbe) und Fremdtermine (grau).
   // Klick auf einen Tag öffnet ihn in der Heute-Ansicht.
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
@@ -60,6 +60,7 @@
           {#if day.open_must}<span class="must" title="Offene Pflicht-Einträge">{day.open_must}</span>{/if}
           <span class="strokes">
             {#each Array(Math.min(day.blocks, MAX_STROKES)) as _}<span class="stroke"></span>{/each}
+            {#each Array(Math.min(day.events, MAX_STROKES)) as _}<span class="stroke event"></span>{/each}
           </span>
         </button>
       {/each}
@@ -84,4 +85,5 @@
   .must { position: absolute; top: 8px; right: 10px; font-size: 0.8rem; color: var(--muted); }
   .strokes { display: flex; gap: 3px; flex-wrap: wrap; }
   .stroke { width: 14px; height: 3px; border-radius: 2px; background: var(--accent); opacity: 0.7; }
+  .stroke.event { background: var(--muted); opacity: 0.5; }
 </style>

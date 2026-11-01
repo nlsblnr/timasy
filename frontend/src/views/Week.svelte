@@ -73,7 +73,7 @@
     </aside>
 
     <section class="grid">
-      <TimeGrid days={data.days} today={data.today} {entries} height="calc(100vh - 300px)" />
+      <TimeGrid days={data.days} today={data.today} {entries} events={data.events} height="calc(100vh - 300px)" />
     </section>
   </div>
 {/if}

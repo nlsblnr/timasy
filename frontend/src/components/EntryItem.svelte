@@ -64,6 +64,7 @@
         {#if isSeries}<span title="Teil einer Serie">↻ Serie{entry.is_exception ? ' (geändert)' : ''}</span>{/if}
         {#if missed}<span class="overdue">verpasst</span>{/if}
         {#if entry.block}<span>{formatTime(entry.block.start_minute)}–{formatTime(entry.block.end_minute)}</span>{/if}
+        {#if entry.conflict}<span class="overdue" title="Überschneidet sich mit einem Termin (R-20)">⚠︎ überschneidet sich mit Termin</span>{/if}
         {#if entry.overdue && !done}<span class="overdue">{overdueText(entry.overdue_days)}</span>{/if}
         {#if entry.task.estimated_minutes}<span>{entry.task.estimated_minutes} min</span>{/if}
         {#each entry.task.tags as tag}<span class="tag">#{tag}</span>{/each}
