@@ -88,7 +88,7 @@ class SeriesIn(BaseModel):
 
 class OccurrenceEdit(BaseModel):
     """R-17: Vorkommen bearbeiten. Nur mitgeschickte Felder werden geändert."""
-    mode: Literal["this", "following", "all"]
+    mode: Literal["this", "following", "all"] = "all"
     title: str | None = None
     notes: str | None = None
     estimated_minutes: int | None = Field(default=None, ge=1)
@@ -276,6 +276,16 @@ def create_app(db_path: Path | str) -> FastAPI:
     def patch_series(series_id: int, body: SeriesPatch, conn: sqlite3.Connection = Depends(get_conn)):
         def do():
             s = services.set_carry_over(conn, series_id, body.carry_over)
+            return services.series_payload(conn, s, clock.today())
+        return run(do)
+
+    @app.put("/api/series/{series_id}")
+    def put_series(series_id: int, body: OccurrenceEdit, conn: sqlite3.Connection = Depends(get_conn)):
+        """Serie direkt bearbeiten (V-5); entspricht "alle" (R-17)."""
+        def do():
+            data = body.model_dump(include=body.model_fields_set - {"mode", "day"})
+            s = services.edit_series(conn, services.get_series(conn, series_id), data,
+                                     clock.today(), clock.now())
             return services.series_payload(conn, s, clock.today())
         return run(do)
 

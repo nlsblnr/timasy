@@ -238,3 +238,13 @@ def test_quick_with_time_creates_block(client):
     # V-7: Uhrzeit im erweiterten Dialog
     r = client.post("/api/quick", json={"text": "Arzt", "date": "2026-11-03", "start_minute": 600})
     assert r.json()["entry"]["block"]["start_minute"] == 600
+
+
+def test_edit_series_directly(client):
+    # V-5: Serie in der Liste bearbeiten = "alle"
+    s = create(client, count=3)
+    r = client.put(f"/api/series/{s['id']}", json={"title": "Laufen", "tier": "bonus", "count": 4})
+    assert r.status_code == 200, r.text
+    assert r.json()["title"] == "Laufen" and r.json()["count"] == 4
+    entries = by_date(client)
+    assert len(entries) == 4 and entries["2026-11-05"]["tier"] == "bonus"

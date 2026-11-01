@@ -6,7 +6,7 @@
 import { api } from './api.js'
 
 export const app = $state({
-  view: 'today',          // 'today', 'week', 'month' oder 'backlog'
+  view: 'today',          // 'today', 'week', 'month', 'backlog' oder 'series'
   today: null,            // heutiges Datum laut Backend
   date: null,             // angezeigter Tag; null = immer der heutige Tag
   tags: [],               // alle bestehenden Tags (für Vorschläge)

@@ -3,13 +3,14 @@
   // Rückgängig-Leiste und Fehlermeldungen.
   //
   // Tastenkürzel (wenn kein Eingabefeld aktiv ist):
-  //   n = Schnellerfassung, h = Heute, w = Woche, m = Monat, b = Backlog
+  //   n = Schnellerfassung, h = Heute, w = Woche, m = Monat, b = Backlog, s = Serien
   import { onMount } from 'svelte'
   import { app, commitPendingDelete, reload, undoDelete } from './lib/state.svelte.js'
   import QuickCapture from './components/QuickCapture.svelte'
   import Today from './views/Today.svelte'
   import Backlog from './views/Backlog.svelte'
   import Month from './views/Month.svelte'
+  import Series from './views/Series.svelte'
   import Week from './views/Week.svelte'
 
   let quickOpen = $state(false)
@@ -25,6 +26,7 @@
     if (e.key === 'w') app.view = 'week'
     if (e.key === 'm') app.view = 'month'
     if (e.key === 'b') app.view = 'backlog'
+    if (e.key === 's') app.view = 'series'
   }
 
   onMount(() => {
@@ -55,6 +57,8 @@
             title="Monat (m)">Monat</button>
     <button class="tab" class:active={app.view === 'backlog'} onclick={() => (app.view = 'backlog')}
             title="Backlog (b)">Backlog</button>
+    <button class="tab" class:active={app.view === 'series'} onclick={() => (app.view = 'series')}
+            title="Serien (s)">Serien</button>
     <span class="spacer"></span>
     <button class="filled" onclick={() => (quickOpen = true)} title="Neue Aufgabe (n)">+ Neu</button>
   </nav>
@@ -67,6 +71,7 @@
     {#if app.view === 'today'}<Today />
     {:else if app.view === 'week'}<Week />
     {:else if app.view === 'month'}<Month />
+    {:else if app.view === 'series'}<Series />
     {:else}<Backlog />{/if}
   </main>
 

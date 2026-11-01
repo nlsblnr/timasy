@@ -53,7 +53,7 @@
     {#each shown as task (task.id)}
       <li>
         <div class="main">
-          <div class="text">
+          <div class="info">
             <span>{task.title}</span>
             <span class="meta">
               {#if task.estimated_minutes}<span>{task.estimated_minutes} min</span>{/if}
@@ -99,7 +99,7 @@
   ul { padding: 0; margin: 0; }
   li { list-style: none; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .main { display: flex; align-items: center; gap: 4px; }
-  .text { flex: 1; display: grid; gap: 2px; }
+  .info { flex: 1; display: grid; gap: 2px; }
   .meta { display: flex; gap: 8px; font-size: 0.8rem; color: var(--muted); }
   .meta:empty { display: none; }
   .assign { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; align-items: center; }

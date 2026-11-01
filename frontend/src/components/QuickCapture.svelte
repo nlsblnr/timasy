@@ -10,6 +10,8 @@
   import { app, reload, showError } from '../lib/state.svelte.js'
   import { formatShort } from '../lib/dates.js'
   import { parseTagList, suggest } from '../lib/tags.js'
+  import { defaultRecurrence, describe, recurrencePayload, timeToMinutes } from '../lib/recurrence.js'
+  import RecurrenceFields from './RecurrenceFields.svelte'
   import TagInput from './TagInput.svelte'
 
   let { onclose } = $props()
@@ -24,6 +26,9 @@
   let minutes = $state('')
   let notes = $state('')
   let tags = $state('')
+  let time = $state('')                    // Uhrzeit "HH:MM" -> Block
+  let repeat = $state(false)               // Wiederholt sich (V-8)
+  let rec = $state(defaultRecurrence())
   let input
 
   // Vorschläge, wenn das letzte Wort mit # beginnt
@@ -32,6 +37,7 @@
 
   let target = $derived(
     period === 'none' ? 'Backlog'
+      : repeat ? describe({ ...recurrencePayload(rec), starts_on: date })
       : period === 'week' ? `Woche von ${formatShort(date)}`
       : formatShort(date)
   )
@@ -55,21 +61,30 @@
   async function submit(e) {
     e.preventDefault()
     if (!text.trim()) return
+    const common = {
+      text,
+      tier,
+      scope: period === 'week' ? 'week' : 'day',
+      notes,
+      estimated_minutes: minutes === '' ? null : Number(minutes),
+      tags: parseTagList(tags),
+      start_minute: period === 'day' ? timeToMinutes(time) : null,
+    }
     try {
-      await api.quick({
-        text,
-        tier,
-        scope: period === 'week' ? 'week' : 'day',
-        date: period === 'none' ? null : date,
-        notes,
-        estimated_minutes: minutes === '' ? null : Number(minutes),
-        tags: parseTagList(tags),
-      })
+      if (repeat && period !== 'none') {
+        // Serie: Dauer des Blocks = geschätzte Dauer (R-21)
+        await api.createSeries({ ...common, starts_on: date, ...recurrencePayload(rec) })
+      } else {
+        await api.quick({ ...common, date: period === 'none' ? null : date })
+      }
       text = ''
       tier = 'must'   // jede neue Eingabe startet wieder mit Pflicht
       notes = ''
       minutes = ''
       tags = ''
+      time = ''
+      repeat = false
+      rec = defaultRecurrence()
       reload()
       input.focus()   // offen lassen für die nächste Eingabe
     } catch (err) {
@@ -116,8 +131,19 @@
         </label>
       {/if}
       <label>Dauer (Minuten) <input type="number" min="1" step="1" bind:value={minutes} /></label>
+      {#if period === 'day'}
+        <label>Uhrzeit (optional) <input type="time" bind:value={time} /></label>
+      {/if}
       <label class="wide">Notiz <textarea rows="2" bind:value={notes}></textarea></label>
       <label class="wide">Weitere Tags <TagInput bind:value={tags} /></label>
+      {#if period !== 'none'}
+        <label class="wide check">
+          <input type="checkbox" bind:checked={repeat} /> Wiederholt sich
+        </label>
+        {#if repeat}
+          <div class="wide"><RecurrenceFields bind:rec startsOn={date} scope={period} /></div>
+        {/if}
+      {/if}
       <!-- Ein Absende-Knopf sorgt auch dafür, dass Enter in jedem Feld speichert:
            Browser senden ein Formular mit mehreren Feldern nur mit so einem Knopf ab. -->
       <div class="wide submit"><button type="submit" class="filled">Hinzufügen</button></div>
@@ -133,11 +159,13 @@
   .line { display: flex; align-items: center; gap: 10px; }
   .title { flex: 1; border: none; background: transparent; font-size: 1.05rem; padding: 6px 0; }
   .title:focus { outline: none; }
-  .target { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  .target { font-size: 0.85rem; color: var(--muted); white-space: nowrap;
+            max-width: 40%; overflow: hidden; text-overflow: ellipsis; }
   .tier { min-width: 70px; }
   .tier.bonus { background: transparent; }
   .suggestions { display: flex; gap: 6px; flex-wrap: wrap; }
   .details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .wide { grid-column: 1 / -1; }
   .submit { display: flex; justify-content: flex-end; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 0.95rem; }
 </style>

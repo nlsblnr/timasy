@@ -557,13 +557,7 @@ def edit_occurrence(conn, entry_id: int, mode: str, data: dict,
         return repo.get_entry(conn, e.id)
 
     if mode == "all":
-        _apply_text(conn, series.task_id, data, copy=False, now=now)
-        updated = build_series(series.task_id, data, base=series)
-        validate(updated)
-        repo.update_series(conn, updated)
-        _drop_future(conn, series, _horizon_start(series, today))
-        generate(conn, updated, today, now)
-        target_series = updated
+        target_series = edit_series(conn, series, data, today, now)
     elif mode == "following":
         old, new = split_series(series, e.occurrence_date)
         task_id = _apply_text(conn, series.task_id, data, copy=True, now=now)
@@ -587,6 +581,18 @@ def edit_occurrence(conn, entry_id: int, mode: str, data: dict,
         if x.occurrence_date == e.occurrence_date:
             return x
     return current or e
+
+
+def edit_series(conn, series: Series, data: dict, today: date, now: datetime) -> Series:
+    """R-17 "alle": Serie ändern; offene künftige Vorkommen werden neu erzeugt,
+    Ausnahmen und erledigte bleiben."""
+    _apply_text(conn, series.task_id, data, copy=False, now=now)
+    updated = build_series(series.task_id, data, base=series)
+    validate(updated)
+    repo.update_series(conn, updated)
+    _drop_future(conn, series, _horizon_start(series, today))
+    generate(conn, updated, today, now)
+    return updated
 
 
 def _set_time(conn, e: Entry, start_minute: int | None, duration: int | None,

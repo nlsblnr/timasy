@@ -36,4 +36,17 @@ export const api = {
   schedule: (entryId, data) => request('POST', `/api/entries/${entryId}/schedule`, data),
   changeBlock: (id, data) => request('PATCH', `/api/blocks/${id}`, data),
   removeBlock: (id) => request('DELETE', `/api/blocks/${id}`),
+  // Serien (M3)
+  seriesList: () => request('GET', '/api/series'),
+  getSeries: (id) => request('GET', `/api/series/${id}`),
+  createSeries: (data) => request('POST', '/api/series', data),
+  previewSeries: (data) => request('POST', '/api/series/preview', data),
+  updateSeries: (id, data) => request('PUT', `/api/series/${id}`, data),
+  setCarryOver: (id, value) => request('PATCH', `/api/series/${id}`, { carry_over: value }),
+  endSeries: (id) => request('POST', `/api/series/${id}/end`),
+  deleteSeries: (id) => request('DELETE', `/api/series/${id}`),
+  // mode: 'this' | 'following' | 'all' (R-17)
+  editOccurrence: (entryId, data) => request('PUT', `/api/entries/${entryId}/occurrence`, data),
+  deleteOccurrence: (entryId, mode) =>
+    request('DELETE', `/api/entries/${entryId}/occurrence?mode=${mode}`),
 }
