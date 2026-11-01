@@ -10,6 +10,7 @@ data/
 *.db-journal
 *.db-wal
 *.db-shm
+makefile
 
 # Google-Zugangsdaten und Tokens: nie ins Repository (T-8)
 credentials*.json
