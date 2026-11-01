@@ -5,12 +5,14 @@
   import { overdueText } from '../lib/dates.js'
   import { deleteTaskWithUndo, reload, showError } from '../lib/state.svelte.js'
   import { ENTRY_MIME, formatTime } from '../lib/timegrid.js'
+  import ConfirmBar from './ConfirmBar.svelte'
   import SeriesEditor from './SeriesEditor.svelte'
   import TaskEditor from './TaskEditor.svelte'
 
   // assignTo: optional, ein Tag, dem ein Wochen-Eintrag zugewiesen werden kann (R-6)
   let { entry, assignTo = null, assignLabel = '' } = $props()
   let editing = $state(false)
+  let confirming = $state(null)   // 'following' oder 'all', während die Rückfrage offen ist
   let menu  // das <details>-Element des Menüs "⋯"
 
   // Menü schliessen bei Klick ausserhalb oder auf einen Menüpunkt und mit Esc.
@@ -84,8 +86,8 @@
           {/if}
           {#if isSeries}
             <button class="text" onclick={() => deleteOccurrence('this')}>Löschen: nur dieses Vorkommen</button>
-            <button class="text" onclick={() => deleteOccurrence('following')}>Löschen: dieses und alle folgenden</button>
-            <button class="text" onclick={() => deleteOccurrence('all')}>Löschen: ganze Serie</button>
+            <button class="text" onclick={() => (confirming = 'following')}>Löschen: dieses und alle folgenden</button>
+            <button class="text" onclick={() => (confirming = 'all')}>Löschen: ganze Serie</button>
           {:else}
             <button class="text" onclick={remove}>Aus Zeitraum entfernen</button>
             <button class="text" onclick={() => deleteTaskWithUndo(entry.task_id, entry.title)}>
@@ -96,6 +98,14 @@
       </details>
     </div>
   </div>
+  {#if confirming}
+    <ConfirmBar
+      message={confirming === 'all'
+        ? `Serie „${entry.title}“ wirklich löschen? Erledigte Vorkommen bleiben erhalten.`
+        : `Dieses und alle folgenden Vorkommen von „${entry.title}“ löschen?`}
+      onconfirm={() => { const mode = confirming; confirming = null; deleteOccurrence(mode) }}
+      oncancel={() => (confirming = null)} />
+  {/if}
   {#if editing && isSeries}
     <SeriesEditor seriesId={entry.series_id} {entry} onclose={() => (editing = false)} />
   {:else if editing}

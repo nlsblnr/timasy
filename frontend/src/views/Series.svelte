@@ -4,10 +4,12 @@
   import { app, reload, showError } from '../lib/state.svelte.js'
   import { formatShort } from '../lib/dates.js'
   import { describe } from '../lib/recurrence.js'
+  import ConfirmBar from '../components/ConfirmBar.svelte'
   import SeriesEditor from '../components/SeriesEditor.svelte'
 
   let list = $state([])
   let editingId = $state(null)
+  let confirmingId = $state(null)   // Serie, deren Löschen gerade bestätigt wird
 
   $effect(() => {
     app.version
@@ -53,9 +55,14 @@
             <button class="text" onclick={() => call(() => api.endSeries(s.id))}
                     title="Endet heute; offene Vorkommen ab morgen werden entfernt">Beenden</button>
           {/if}
-          <button class="text" onclick={() => call(() => api.deleteSeries(s.id))}
+          <button class="text" onclick={() => (confirmingId = s.id)}
                   title="Erledigte Vorkommen bleiben erhalten">Löschen</button>
         </div>
+        {#if confirmingId === s.id}
+          <ConfirmBar message={`Serie „${s.title}“ wirklich löschen? Erledigte Vorkommen bleiben erhalten.`}
+                      onconfirm={() => { confirmingId = null; call(() => api.deleteSeries(s.id)) }}
+                      oncancel={() => (confirmingId = null)} />
+        {/if}
         {#if editingId === s.id}
           <SeriesEditor seriesId={s.id} onclose={() => (editingId = null)} />
         {/if}
