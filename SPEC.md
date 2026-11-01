@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.5 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.6 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -121,8 +121,8 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 ## 7. Google-Calendar-Sync
 
-- **S-1 Anmeldung:** OAuth 2.0 für Desktop-Apps. Einmalige Einrichtung: eigenes Google-Cloud-Projekt, Calendar API aktivieren, Zugangsdaten vom Typ „Desktop-App“ erstellen. Claude liefert dafür in Meilenstein M4 eine Schritt-für-Schritt-Anleitung.
-- **S-2 Berechtigungen:** so gering wie möglich: alle Kalender lesen; Schreiben nur im von Timasy angelegten Kalender. Die aktuellen Bezeichnungen der Berechtigungen prüft Claude bei der Umsetzung in der Google-Dokumentation.
+- **S-1 Anmeldung:** OAuth 2.0 für Desktop-Apps (Weiterleitung an `http://127.0.0.1:<port>`, mit PKCE). Einmalige Einrichtung: eigenes Google-Cloud-Projekt, Calendar API aktivieren, Zugangsdaten vom Typ „Desktop-App“ erstellen. \[Entscheid v0.6\] Das Projekt wird auf „In Produktion“ gestellt, weil Google im Status „Testing“ Zugangstokens nach 7 Tagen ablaufen lässt; für die eigene Nutzung ist keine Prüfung durch Google nötig, bei der Anmeldung erscheint einmalig der Hinweis „nicht überprüfte App“. Anleitung: `docs/google-einrichtung.md`.
+- **S-2 Berechtigungen:** so gering wie möglich (geprüft in der Google-Dokumentation, Stand 2026-09-03): `calendar.calendarlist.readonly` (Kalenderliste sehen), `calendar.events.readonly` (Termine lesen), `calendar.app.created` (eigene Kalender anlegen und nur darin Termine ändern). \[Entscheid v0.6\] Alle drei werden schon in M4 angefragt, damit die Anmeldung nur einmal nötig ist; geschrieben wird erst ab M5.
 - **S-3 \[Entscheid\] Eigener Kalender:** Beim ersten Sync legt Timasy einen Kalender „Timasy“ an und merkt sich dessen ID. Alle Blöcke leben nur dort.
 - **S-4 Fremdtermine lesen:** \[Entscheid v0.5\] nur aus den Kalendern, die in den Einstellungen ausdrücklich gewählt sind (Standard: keiner; der Timasy-Kalender ist nie wählbar). Gespeichert werden Titel und Zeiten. Zeitfenster: ab heute bis 90 Tage voraus, keine vergangenen Tage. Abgleich inkrementell über Sync-Token; ist der Token ungültig, wird neu abgeglichen. Wiederkehrende Fremdtermine erscheinen als einzelne Vorkommen. Ganztägige Termine werden als Streifen am Tagesanfang dargestellt.
 - **S-5 Zuordnung:** Jeder Block entspricht genau einem Ereignis im Timasy-Kalender. Das Ereignis trägt private Zusatzfelder mit Block-ID und Eintrags-ID, der Block speichert die Google-Ereignis-ID.
@@ -184,7 +184,7 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **A-4 Block bei Übertragung:** *Erledigt (v0.3):* Der alte Block wird gelöscht (R-12).
 - **A-5 Fortschritt:** *Erledigt (v0.2):* Zählung nach Anzahl, nicht nach Dauer (R-2).
 - **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
-- **A-7 Berechtigungen und Anmeldung:** Die Bezeichnungen der Google-Berechtigungen und das Verhalten der Anmeldung im Testmodus (Ablauf der Zugangstokens) werden in M4 gegen die aktuelle Google-Dokumentation geprüft.
+- **A-7 Berechtigungen und Anmeldung:** *Erledigt (v0.6):* siehe S-1 und S-2.
 - **A-8 Serien in Google:** Einzelne Ereignisse statt Google-Serien (S-11).
 - **A-9 Planungshorizont:** 90 Tage für Serien (R-16, *bestätigt v0.4*); Fremdtermine ab heute bis 90 Tage voraus (S-4, *entschieden v0.5*).
 
@@ -206,3 +206,4 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **01.11.2026:** M3 abgenommen. Rückfrage vor dem Löschen einer Serie ergänzt.
 - **01.11.2026, v0.5:** Vor Beginn von M4 (S-4): Fremdtermine nur aus ausdrücklich gewählten Kalendern (Standard keiner), Titel und Zeiten werden gespeichert, Zeitfenster ab heute bis 90 Tage voraus (vorher: alle sichtbaren Kalender, 30 Tage zurück bis 365 voraus).
 - **01.11.2026:** Zur Prüfung: R-30 (ganztägige Termine zählen nicht als Überschneidung).
+- **01.11.2026, v0.6:** A-7 gegen die Google-Dokumentation geprüft: Berechtigungen in S-2 präzisiert (nur Kalenderliste lesen, Termine lesen, eigener Kalender); alle drei schon in M4 anfragen. Projekt „In Produktion“, weil Tokens im Status „Testing“ nach 7 Tagen ablaufen (S-1).
