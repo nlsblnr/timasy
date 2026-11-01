@@ -3,6 +3,8 @@ fastapi>=0.115
 uvicorn>=0.30
 tzdata>=2024.1          # Zeitzonendaten (nötig unter Windows)
 python-dateutil>=2.9    # Wiederholungsregeln (T-7)
+google-api-python-client>=2.150   # Google Calendar API (T-7)
+google-auth-oauthlib>=1.2         # Anmeldung bei Google (T-7)
 
 # Tests
 pytest>=8

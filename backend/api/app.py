@@ -22,6 +22,7 @@ from ..db import repository as repo
 from ..db.connection import connect, init_db
 from ..domain.models import Scope, Tier
 from ..domain.series import EndType, Freq, MonthlyBy
+from ..sync.service import SyncService
 
 
 # --- Formate der Anfragen ----------------------------------------------------
@@ -112,6 +113,10 @@ class SeriesPatch(BaseModel):
     carry_over: bool
 
 
+class CalendarPatch(BaseModel):
+    selected: bool
+
+
 class BlockPatch(BaseModel):
     day: dt.date
     start_minute: int
@@ -120,14 +125,22 @@ class BlockPatch(BaseModel):
 
 # --- App ---------------------------------------------------------------------
 
-def create_app(db_path: Path | str) -> FastAPI:
+def create_app(db_path: Path | str, sync_service: SyncService | None = None,
+               start_sync: bool = False) -> FastAPI:
+    """start_sync=True startet den Abgleich mit Google im Hintergrund (S-9)."""
+    sync = sync_service or SyncService(db_path)
+
     @asynccontextmanager
     async def lifespan(app):
         init_db(db_path)  # Migrationen beim Start
+        if start_sync:
+            sync.start()
         yield
+        sync.stop()
 
     app = FastAPI(title="Timasy", lifespan=lifespan)
     app.state.db_path = db_path
+    app.state.sync = sync
 
     def get_conn():
         """Eine Verbindung pro Anfrage; am Ende wird gespeichert (commit)."""
@@ -316,6 +329,42 @@ def create_app(db_path: Path | str) -> FastAPI:
                           conn: sqlite3.Connection = Depends(get_conn)):
         run(lambda: services.delete_occurrence(conn, entry_id, mode, clock.today()))
         return {"ok": True}
+
+    # --- Google und Abgleich (M4, V-6) -------------------------------------------
+
+    @app.get("/api/sync/status")
+    def get_sync_status():
+        return sync.status()
+
+    @app.post("/api/sync")
+    def post_sync():
+        """ "Jetzt synchronisieren" (S-9)."""
+        sync.trigger()
+        return sync.status()
+
+    @app.post("/api/google/connect")
+    def post_google_connect():
+        sync.connect_google()
+        return sync.status()
+
+    @app.post("/api/google/disconnect")
+    def post_google_disconnect():
+        sync.disconnect_google()
+        return sync.status()
+
+    @app.get("/api/google/calendars")
+    def get_google_calendars(conn: sqlite3.Connection = Depends(get_conn)):
+        return repo.calendars(conn)
+
+    @app.patch("/api/google/calendars/{calendar_id:path}")
+    def patch_google_calendar(calendar_id: str, body: CalendarPatch,
+                              conn: sqlite3.Connection = Depends(get_conn)):
+        """Kalender zum Lesen wählen oder abwählen (S-4)."""
+        if not repo.set_calendar_selected(conn, calendar_id, body.selected):
+            raise HTTPException(404, "Kalender nicht gefunden.")
+        conn.commit()
+        sync.trigger()
+        return next(c for c in repo.calendars(conn) if c["id"] == calendar_id)
 
     # Das gebaute Frontend (npm run build) unter "/" ausliefern.
     if FRONTEND_DIST.exists():

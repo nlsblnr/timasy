@@ -178,3 +178,25 @@ def test_quick_with_details(client):
     assert r["task"]["estimated_minutes"] == 90
     assert r["task"]["tags"] == ["finanzen", "wichtig"]
     assert r["entry"]["tier"] == "bonus"
+
+
+# --- M4: Einstellungen und Abgleich (V-6, S-9) ------------------------------
+
+def test_sync_status_and_calendar_selection(tmp_path, monkeypatch):
+    from backend.sync.service import SyncService
+    from tests.test_sync_service import FakeWithCreate
+    monkeypatch.setenv("TIMASY_TODAY", "2026-11-04")
+    google = FakeWithCreate()
+    db = tmp_path / "s.db"
+    app = create_app(db, sync_service=SyncService(db, client_factory=lambda: google))
+    with TestClient(app) as c:
+        assert c.get("/api/sync/status").json()["state"] == "idle"
+        app.state.sync.run_once()
+        assert c.get("/api/sync/status").json()["state"] == "ok"
+        cals = c.get("/api/google/calendars").json()
+        assert [x["id"] for x in cals] == ["arbeit", "privat"]
+        assert all(x["selected"] is False for x in cals)
+        r = c.patch("/api/google/calendars/privat", json={"selected": True})
+        assert r.status_code == 200 and r.json()["selected"] is True
+        assert c.patch("/api/google/calendars/gibtsnicht", json={"selected": True}).status_code == 404
+        assert c.post("/api/sync").status_code == 200

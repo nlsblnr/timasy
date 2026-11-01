@@ -6,7 +6,8 @@ import pytest
 
 from backend.db import repository as repo
 from backend.db.connection import connect, init_db
-from backend.sync.read import SyncTokenInvalid, sync_calendar_list, sync_external
+from backend.sync.errors import SyncTokenInvalid
+from backend.sync.read import sync_calendar_list, sync_external
 
 ZH = ZoneInfo("Europe/Zurich")
 TODAY = date(2026, 11, 4)

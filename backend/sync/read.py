@@ -11,11 +11,11 @@ from datetime import date, datetime
 from typing import Protocol
 
 from ..db import repository as repo
+from ..config import TIMEZONE
 from ..domain.external import apply_changes, parse_event, selectable_calendars, sync_window
+from .errors import SyncTokenInvalid
 
-
-class SyncTokenInvalid(Exception):
-    """Google meldet: Sync-Token ungültig (HTTP 410) -> neu abgleichen."""
+TIMASY_CALENDAR_NAME = "Timasy"
 
 
 class CalendarClient(Protocol):
@@ -28,6 +28,18 @@ class CalendarClient(Protocol):
                     time_max: str | None = None, sync_token: str | None = None,
                     page_token: str | None = None) -> dict:
         """Eine Seite: {"items": [...], "nextPageToken" | "nextSyncToken": ...}"""
+
+    def create_calendar(self, summary: str, time_zone: str) -> str:
+        """Neuen (sekundären) Kalender anlegen; gibt seine ID zurück."""
+
+
+def ensure_timasy_calendar(conn, client: CalendarClient) -> str:
+    """S-3: Beim ersten Abgleich den Kalender "Timasy" anlegen und die ID merken."""
+    calendar_id = repo.get_setting(conn, "timasy_calendar_id")
+    if not calendar_id:
+        calendar_id = client.create_calendar(TIMASY_CALENDAR_NAME, TIMEZONE.key)
+        repo.set_setting(conn, "timasy_calendar_id", calendar_id)
+    return calendar_id
 
 
 def sync_calendar_list(conn, client: CalendarClient) -> None:

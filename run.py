@@ -19,7 +19,8 @@ def main() -> None:
     url = f"http://{HOST}:{PORT}"
     print(f"Timasy läuft auf {url} (Datenbank: {DB_PATH}). Beenden mit Ctrl+C.")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    uvicorn.run(create_app(DB_PATH), host=HOST, port=PORT, log_level="warning")
+    # start_sync: Abgleich mit Google im Hintergrund (S-9)
+    uvicorn.run(create_app(DB_PATH, start_sync=True), host=HOST, port=PORT, log_level="warning")
 
 
 if __name__ == "__main__":
