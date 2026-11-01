@@ -12,6 +12,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from .. import clock, services
@@ -19,6 +21,7 @@ from ..config import FRONTEND_DIST
 from ..db import repository as repo
 from ..db.connection import connect, init_db
 from ..domain.models import Scope, Tier
+from ..domain.series import EndType, Freq, MonthlyBy
 
 
 # --- Formate der Anfragen ----------------------------------------------------
@@ -32,6 +35,7 @@ class QuickIn(BaseModel):
     notes: str = ""
     estimated_minutes: int | None = Field(default=None, ge=1)
     tags: list[str] = []
+    start_minute: int | None = None  # Uhrzeit -> Block
 
 
 class TaskIn(BaseModel):
@@ -59,6 +63,53 @@ class ScheduleIn(BaseModel):
     day: dt.date
     start_minute: int
     end_minute: int | None = None    # ohne Ende: Standarddauer (R-21)
+
+
+class SeriesIn(BaseModel):
+    """Neue Serie (V-8). Wochentage: 0 = Montag bis 6 = Sonntag."""
+    text: str = ""
+    notes: str = ""
+    estimated_minutes: int | None = Field(default=None, ge=1)
+    tags: list[str] = []
+    tier: Tier = Tier.MUST
+    scope: Scope = Scope.DAY
+    starts_on: dt.date
+    freq: Freq
+    interval: int = 1
+    weekdays: list[int] = []
+    monthly_by: MonthlyBy = MonthlyBy.DAY
+    end_type: EndType = EndType.NEVER
+    until_date: dt.date | None = None
+    count: int | None = None
+    start_minute: int | None = None
+    duration_minutes: int | None = Field(default=None, ge=1)
+    carry_over: bool = False
+
+
+class OccurrenceEdit(BaseModel):
+    """R-17: Vorkommen bearbeiten. Nur mitgeschickte Felder werden geändert."""
+    mode: Literal["this", "following", "all"]
+    title: str | None = None
+    notes: str | None = None
+    estimated_minutes: int | None = Field(default=None, ge=1)
+    tags: list[str] | None = None
+    tier: Tier | None = None
+    day: dt.date | None = None             # nur "this"
+    start_minute: int | None = None        # None mitschicken = Uhrzeit entfernen
+    duration_minutes: int | None = Field(default=None, ge=1)
+    starts_on: dt.date | None = None       # nur "all"
+    freq: Freq | None = None
+    interval: int | None = None
+    weekdays: list[int] | None = None
+    monthly_by: MonthlyBy | None = None
+    end_type: EndType | None = None
+    until_date: dt.date | None = None
+    count: int | None = None
+    carry_over: bool | None = None
+
+
+class SeriesPatch(BaseModel):
+    carry_over: bool
 
 
 class BlockPatch(BaseModel):
@@ -100,12 +151,12 @@ def create_app(db_path: Path | str) -> FastAPI:
     @app.get("/api/day")
     def get_day(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
         today = clock.today()
-        services.roll_over(conn, today)
+        services.refresh(conn, today, clock.now())
         return services.day_view(conn, date or today, today)
 
     @app.get("/api/backlog")
     def get_backlog(conn: sqlite3.Connection = Depends(get_conn)):
-        services.roll_over(conn, clock.today())
+        services.refresh(conn, clock.today(), clock.now())
         return {"tasks": services.backlog(conn)}
 
     @app.get("/api/tags")
@@ -117,7 +168,7 @@ def create_app(db_path: Path | str) -> FastAPI:
         def do():
             task_id, entry = services.quick_capture(
                 conn, body.text, clock.now(), body.tier, body.scope, body.date,
-                body.notes, body.estimated_minutes, body.tags)
+                body.notes, body.estimated_minutes, body.tags, body.start_minute, clock.today())
             return {
                 "task": services.task_payload(conn, task_id),
                 "entry": services.entry_payloads(conn, [entry], clock.today())[0] if entry else None,
@@ -168,13 +219,13 @@ def create_app(db_path: Path | str) -> FastAPI:
     @app.get("/api/week")
     def get_week(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
         today = clock.today()
-        services.roll_over(conn, today)
+        services.refresh(conn, today, clock.now())
         return services.week_view(conn, date or today, today)
 
     @app.get("/api/month")
     def get_month(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
         today = clock.today()
-        services.roll_over(conn, today)
+        services.refresh(conn, today, clock.now())
         return services.month_view(conn, date or today, today)
 
     @app.post("/api/entries/{entry_id}/schedule")
@@ -196,6 +247,63 @@ def create_app(db_path: Path | str) -> FastAPI:
     @app.delete("/api/blocks/{block_id}")
     def delete_block(block_id: int, conn: sqlite3.Connection = Depends(get_conn)):
         run(lambda: services.remove_block(conn, block_id))
+        return {"ok": True}
+
+    # --- Serien (M3) -----------------------------------------------------------
+
+    @app.get("/api/series")
+    def get_series_list(conn: sqlite3.Connection = Depends(get_conn)):
+        services.refresh(conn, clock.today(), clock.now())
+        return services.list_series(conn, clock.today())
+
+    @app.get("/api/series/{series_id}")
+    def get_series(series_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+        return run(lambda: services.series_payload(
+            conn, services.get_series(conn, series_id), clock.today()))
+
+    @app.post("/api/series")
+    def post_series(body: SeriesIn, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            s = services.create_series(conn, body.model_dump(), clock.today(), clock.now())
+            return services.series_payload(conn, s, clock.today())
+        return run(do)
+
+    @app.post("/api/series/preview")
+    def post_series_preview(body: SeriesIn):
+        return run(lambda: [d.isoformat() for d in services.preview_series(body.model_dump())])
+
+    @app.patch("/api/series/{series_id}")
+    def patch_series(series_id: int, body: SeriesPatch, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            s = services.set_carry_over(conn, series_id, body.carry_over)
+            return services.series_payload(conn, s, clock.today())
+        return run(do)
+
+    @app.post("/api/series/{series_id}/end")
+    def post_series_end(series_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            s = services.end_series_now(conn, series_id, clock.today())
+            return services.series_payload(conn, s, clock.today())
+        return run(do)
+
+    @app.delete("/api/series/{series_id}")
+    def delete_series(series_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+        run(lambda: services.delete_series(conn, series_id))
+        return {"ok": True}
+
+    @app.put("/api/entries/{entry_id}/occurrence")
+    def put_occurrence(entry_id: int, body: OccurrenceEdit, conn: sqlite3.Connection = Depends(get_conn)):
+        def do():
+            # Nur Felder weitergeben, die wirklich mitgeschickt wurden
+            data = body.model_dump(include=body.model_fields_set - {"mode"})
+            e = services.edit_occurrence(conn, entry_id, body.mode, data, clock.today(), clock.now())
+            return services.entry_payloads(conn, [e], clock.today())[0]
+        return run(do)
+
+    @app.delete("/api/entries/{entry_id}/occurrence")
+    def delete_occurrence(entry_id: int, mode: Literal["this", "following", "all"],
+                          conn: sqlite3.Connection = Depends(get_conn)):
+        run(lambda: services.delete_occurrence(conn, entry_id, mode, clock.today()))
         return {"ok": True}
 
     # Das gebaute Frontend (npm run build) unter "/" ausliefern.

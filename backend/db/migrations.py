@@ -58,6 +58,30 @@ MIGRATIONS: list[str] = [
         last_synced_at   TEXT
     );
     """,
+    # 3: Serien (M3)
+    """
+    CREATE TABLE series (
+        id               INTEGER PRIMARY KEY,
+        task_id          INTEGER NOT NULL REFERENCES task(id) ON DELETE CASCADE,
+        rrule            TEXT    NOT NULL,   -- z.B. FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE
+        starts_on        TEXT    NOT NULL,   -- ISO-Datum
+        end_type         TEXT    NOT NULL CHECK (end_type IN ('never', 'until', 'count')),
+        until_date       TEXT,
+        count            INTEGER,
+        tier             TEXT    NOT NULL CHECK (tier IN ('must', 'bonus')),
+        scope            TEXT    NOT NULL CHECK (scope IN ('day', 'week')),
+        start_minute     INTEGER,            -- feste Uhrzeit, Minuten seit Mitternacht
+        duration_minutes INTEGER,
+        carry_over       INTEGER NOT NULL DEFAULT 0,
+        exdates          TEXT    NOT NULL DEFAULT ''  -- gelöschte Vorkommen, durch Komma getrennt
+    );
+
+    -- Wird eine Serie gelöscht, bleiben erledigte Vorkommen als Verlauf (series_id wird leer).
+    ALTER TABLE entry ADD COLUMN series_id INTEGER REFERENCES series(id) ON DELETE SET NULL;
+    ALTER TABLE entry ADD COLUMN occurrence_date TEXT;
+    ALTER TABLE entry ADD COLUMN is_exception INTEGER NOT NULL DEFAULT 0;
+    CREATE INDEX entry_series ON entry (series_id, occurrence_date);
+    """,
 ]
 
 

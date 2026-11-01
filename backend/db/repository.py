@@ -9,6 +9,7 @@ from typing import Iterable
 
 from ..domain.blocks import Block
 from ..domain.models import Entry, Scope, Status, Tier
+from ..domain.series import EndType, Series, from_rrule, to_rrule
 from ..domain.tags import normalize_tag
 
 
@@ -25,6 +26,9 @@ def _to_entry(row: sqlite3.Row) -> Entry:
         done_at=datetime.fromisoformat(row["done_at"]) if row["done_at"] else None,
         overdue=bool(row["overdue"]),
         overdue_since=date.fromisoformat(row["overdue_since"]) if row["overdue_since"] else None,
+        series_id=row["series_id"],
+        occurrence_date=date.fromisoformat(row["occurrence_date"]) if row["occurrence_date"] else None,
+        is_exception=bool(row["is_exception"]),
     )
 
 
@@ -38,6 +42,9 @@ def _entry_values(e: Entry) -> dict:
         "done_at": e.done_at.isoformat() if e.done_at else None,
         "overdue": int(e.overdue),
         "overdue_since": e.overdue_since.isoformat() if e.overdue_since else None,
+        "series_id": e.series_id,
+        "occurrence_date": e.occurrence_date.isoformat() if e.occurrence_date else None,
+        "is_exception": int(e.is_exception),
     }
 
 
@@ -83,7 +90,8 @@ def backlog_task_ids(conn) -> list[int]:
     """Aufgaben ohne offenen und ohne erledigten Eintrag (Backlog, v0.2).
 
     Entspricht domain.entries.is_in_backlog, aber direkt in SQL, damit es auch
-    bei tausenden Einträgen schnell bleibt.
+    bei tausenden Einträgen schnell bleibt. Vorlagen von Serien gehören nie
+    in den Backlog.
     """
     rows = conn.execute(
         """
@@ -92,6 +100,7 @@ def backlog_task_ids(conn) -> list[int]:
             SELECT 1 FROM entry
             WHERE entry.task_id = task.id AND entry.status IN ('open', 'done')
         )
+        AND NOT EXISTS (SELECT 1 FROM series WHERE series.task_id = task.id)
         ORDER BY created_at DESC, id DESC
         """
     ).fetchall()
@@ -246,3 +255,82 @@ def blocks_for_entries(conn, entry_ids: Iterable[int]) -> dict[int, Block]:
     marks = ",".join("?" * len(ids))
     rows = conn.execute(f"SELECT * FROM block WHERE entry_id IN ({marks})", ids).fetchall()
     return {r["entry_id"]: _to_block(r) for r in rows}
+
+
+def task_is_unused(conn, task_id: int) -> bool:
+    """Keine Einträge und keine Serie verweisen mehr auf die Aufgabe."""
+    return conn.execute(
+        "SELECT NOT EXISTS (SELECT 1 FROM entry WHERE task_id = ?) "
+        "AND NOT EXISTS (SELECT 1 FROM series WHERE task_id = ?)",
+        (task_id, task_id)).fetchone()[0] == 1
+
+
+def entries_for_series(conn, series_id: int) -> list[Entry]:
+    rows = conn.execute("SELECT * FROM entry WHERE series_id = ? ORDER BY occurrence_date",
+                        (series_id,)).fetchall()
+    return [_to_entry(r) for r in rows]
+
+
+# --- Serien --------------------------------------------------------------------
+
+def _to_series(row) -> Series:
+    def d(v):
+        return date.fromisoformat(v) if v else None
+    return Series(
+        id=row["id"],
+        task_id=row["task_id"],
+        pattern=from_rrule(row["rrule"]),
+        starts_on=d(row["starts_on"]),
+        end_type=EndType(row["end_type"]),
+        tier=Tier(row["tier"]),
+        scope=Scope(row["scope"]),
+        until_date=d(row["until_date"]),
+        count=row["count"],
+        start_minute=row["start_minute"],
+        duration_minutes=row["duration_minutes"],
+        carry_over=bool(row["carry_over"]),
+        exdates=frozenset(date.fromisoformat(x) for x in row["exdates"].split(",") if x),
+    )
+
+
+def _series_values(s: Series) -> dict:
+    return {
+        "task_id": s.task_id,
+        "rrule": to_rrule(s.pattern, s.starts_on),
+        "starts_on": s.starts_on.isoformat(),
+        "end_type": s.end_type.value,
+        "until_date": s.until_date.isoformat() if s.until_date else None,
+        "count": s.count,
+        "tier": s.tier.value,
+        "scope": s.scope.value,
+        "start_minute": s.start_minute,
+        "duration_minutes": s.duration_minutes,
+        "carry_over": int(s.carry_over),
+        "exdates": ",".join(sorted(d.isoformat() for d in s.exdates)),
+    }
+
+
+def insert_series(conn, s: Series) -> int:
+    v = _series_values(s)
+    cols = ", ".join(v)
+    marks = ", ".join(f":{k}" for k in v)
+    return conn.execute(f"INSERT INTO series ({cols}) VALUES ({marks})", v).lastrowid
+
+
+def update_series(conn, s: Series) -> None:
+    v = _series_values(s)
+    sets = ", ".join(f"{k} = :{k}" for k in v)
+    conn.execute(f"UPDATE series SET {sets} WHERE id = :id", {**v, "id": s.id})
+
+
+def get_series(conn, series_id: int) -> Series | None:
+    row = conn.execute("SELECT * FROM series WHERE id = ?", (series_id,)).fetchone()
+    return _to_series(row) if row else None
+
+
+def all_series(conn) -> list[Series]:
+    return [_to_series(r) for r in conn.execute("SELECT * FROM series ORDER BY id")]
+
+
+def delete_series(conn, series_id: int) -> None:
+    conn.execute("DELETE FROM series WHERE id = ?", (series_id,))

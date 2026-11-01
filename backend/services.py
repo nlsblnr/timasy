@@ -8,13 +8,19 @@ from dataclasses import asdict, replace
 from datetime import date, datetime, timedelta
 
 from .db import repository as repo
-from .domain.blocks import Block, create_block, local_minutes, minutes_on_day, move_block
+from .domain.blocks import (
+    Block, create_block, default_duration, local_minutes, minutes_on_day, move_block,
+)
 from .domain.entries import assign_task, mark_done, mark_open, move_entry_to_day
 from .domain.models import Entry, Scope, Status, Tier
 from .domain.periods import month_weeks, week_days, week_start
 from .domain.progress import Progress, day_progress, week_progress
 from .domain.quick_capture import parse_quick_input
 from .domain.rollover import carry_over, overdue_days
+from .domain.series import (
+    EndType, Freq, MonthlyBy, Pattern, Series, end_series, make_entry, missing_occurrences,
+    occurrences, preview, split_series, validate,
+)
 
 
 class NotFound(Exception):
@@ -25,24 +31,49 @@ class Conflict(Exception):
     pass
 
 
-# --- Übertragung (R-9 bis R-11) ----------------------------------------------
+# --- Übertragung und Serien nachziehen (R-9 bis R-13, R-16) ----------------
 
-def roll_over(conn: sqlite3.Connection, today: date) -> int:
-    """Überträgt offene Einträge vergangener Zeiträume. Gibt die Anzahl zurück.
+def refresh(conn: sqlite3.Connection, today: date, now: datetime) -> None:
+    """Wird vor jeder Ansicht aufgerufen.
 
-    Wird vor jeder Ansicht aufgerufen. So greift die Übertragung beim ersten
-    Start an einem neuen Tag und beim Tageswechsel, solange die App läuft.
-    Läuft sie mehrfach, passiert nichts Neues (es gibt dann nichts zu tun).
+    So greifen Übertragung und Serien beim ersten Start an einem neuen Tag und
+    beim Tageswechsel, solange die App läuft. Läuft es mehrfach, passiert
+    nichts Neues (es gibt dann nichts zu tun).
     """
-    changed = carry_over(repo.open_entries_before(conn, today), today)
+    all_series = repo.all_series(conn)
+    roll_over(conn, today, {s.id for s in all_series if s.carry_over})
+    for series in all_series:
+        generate(conn, series, today, now)
+
+
+def roll_over(conn, today: date, carry_series: set[int] = frozenset()) -> int:
+    """Überträgt offene Einträge vergangener Zeiträume (R-9 bis R-11) bzw.
+    setzt Serien-Vorkommen auf "verpasst" (R-13). Gibt die Anzahl zurück."""
+    changed = carry_over(repo.open_entries_before(conn, today), today, carry_series)
     blocks = repo.blocks_for_entries(conn, [e.id for e in changed])
     for e in changed:
         repo.update_entry(conn, e)
-        if e.id in blocks:
+        if e.status == Status.OPEN and e.id in blocks:
             # R-12: Der alte Block wird gelöscht; am neuen Tag ist der
-            # Eintrag zunächst nicht eingeplant.
+            # Eintrag zunächst nicht eingeplant. Verpasste behalten ihren Block.
             repo.delete_block(conn, blocks[e.id].id)
     return len(changed)
+
+
+def generate(conn, series: Series, today: date, now: datetime) -> None:
+    """R-16: Einträge (und Blöcke bei fester Uhrzeit) für die nächsten 90 Tage."""
+    existing = {e.occurrence_date for e in repo.entries_for_series(conn, series.id)}
+    missing = missing_occurrences(series, today, existing)
+    if not missing:
+        return
+    estimate = repo.get_task(conn, series.task_id)["estimated_minutes"]
+    for day in missing:
+        e = make_entry(series, day)
+        e = replace(e, id=repo.insert_entry(conn, e))
+        if series.start_minute is not None:
+            duration = series.duration_minutes or default_duration(estimate)
+            end = min(series.start_minute + duration, 24 * 60)
+            repo.insert_block(conn, create_block(e, day, series.start_minute, end, None, now))
 
 
 # --- Aufgaben ----------------------------------------------------------------
@@ -112,6 +143,7 @@ def entry_payloads(conn, entries: list[Entry], today: date) -> list[dict]:
     for e in entries:
         d = asdict(e)
         d.update(
+            occurrence_date=e.occurrence_date.isoformat() if e.occurrence_date else None,
             scope=e.scope.value,
             tier=e.tier.value,
             status=e.status.value,
@@ -159,14 +191,20 @@ def change_entry(conn, entry_id: int, now: datetime, today: date, done: bool | N
     if day is not None and (e.scope == Scope.WEEK or day != e.period_start):
         e = move_entry_to_day(e, day, today)  # bei Wochen-Einträgen R-6
         _move_block_with_entry(conn, e, now)
-    if tier is not None:
-        e = replace(e, tier=tier)
+        e = _as_exception(e)
+    if tier is not None and tier != e.tier:
+        e = _as_exception(replace(e, tier=tier))
     if done is True and e.status != Status.DONE:
         e = mark_done(e, now)            # R-7
     elif done is False:
         e = mark_open(e)
     repo.update_entry(conn, e)
     return e
+
+
+def _as_exception(e: Entry) -> Entry:
+    """R-27: Ein einzeln geändertes Serien-Vorkommen wird zur Ausnahme (R-17)."""
+    return replace(e, is_exception=True) if e.series_id is not None else e
 
 
 def _move_block_with_entry(conn, e: Entry, now: datetime) -> None:
@@ -204,6 +242,7 @@ def schedule_entry(conn, entry_id: int, day: date, start_minute: int, end_minute
         task = repo.get_task(conn, e.task_id)
         block = create_block(e, day, start_minute, end_minute, task["estimated_minutes"], now)
         repo.insert_block(conn, block)
+    e = _as_exception(e)
     repo.update_entry(conn, e)
     return e
 
@@ -217,35 +256,50 @@ def change_block(conn, block_id: int, day: date, start_minute: int, end_minute: 
     e = repo.get_entry(conn, block.entry_id)
     block, e = move_block(block, e, day, start_minute, end_minute, today, now)
     repo.update_block(conn, block)
+    e = _as_exception(e)
     repo.update_entry(conn, e)
     return e
 
 
 def remove_block(conn, block_id: int) -> None:
     """Block löschen; der Eintrag bleibt, ist aber nicht mehr eingeplant."""
-    if repo.get_block(conn, block_id) is None:
+    block = repo.get_block(conn, block_id)
+    if block is None:
         raise NotFound
     repo.delete_block(conn, block_id)
+    e = repo.get_entry(conn, block.entry_id)
+    repo.update_entry(conn, _as_exception(e))
 
 
 def remove_entry(conn, entry_id: int) -> None:
-    """R-8: aus Zeitraum entfernen; die Aufgabe geht zurück in den Backlog."""
-    if repo.get_entry(conn, entry_id) is None:
+    """R-8: aus Zeitraum entfernen; die Aufgabe geht zurück in den Backlog.
+
+    Bei Serien-Vorkommen wird nur dieses Vorkommen gelöscht (R-27).
+    """
+    e = repo.get_entry(conn, entry_id)
+    if e is None:
         raise NotFound
+    if e.series_id is not None:
+        delete_occurrence(conn, entry_id, "this", e.period_start)
+        return
     repo.delete_entry(conn, entry_id)
 
 
 def quick_capture(conn, text: str, now: datetime, tier: Tier = Tier.MUST,
                   scope: Scope = Scope.DAY, day: date | None = None, notes: str = "",
-                  estimated_minutes: int | None = None,
-                  extra_tags: list[str] = ()) -> tuple[int, Entry | None]:
+                  estimated_minutes: int | None = None, extra_tags: list[str] = (),
+                  start_minute: int | None = None,
+                  today: date | None = None) -> tuple[int, Entry | None]:
     """V-7: Mit Datum entsteht ein Eintrag, ohne Datum eine Aufgabe im Backlog.
 
-    notes, estimated_minutes und extra_tags kommen aus dem erweiterten Dialog.
+    notes, estimated_minutes, extra_tags und start_minute (Uhrzeit, ergibt
+    einen Block) kommen aus dem erweiterten Dialog.
     """
     title, tags = parse_quick_input(text)
     task_id = create_task(conn, title, now, notes, estimated_minutes, [*tags, *extra_tags])
     entry = create_entry(conn, task_id, scope, day, tier) if day else None
+    if entry and start_minute is not None:
+        entry = schedule_entry(conn, entry.id, day, start_minute, None, today or day, now)
     return task_id, entry
 
 
@@ -318,3 +372,268 @@ def month_view(conn, any_day: date, today: date) -> dict:
             "blocks": block_count.get(d, 0),
         } for d in week] for week in weeks],
     }
+
+
+# --- Serien (M3) ----------------------------------------------------------------
+
+def build_series(task_id: int, data: dict, base: Series | None = None) -> Series:
+    """Serie aus den Angaben des Formulars bauen (V-8).
+
+    Mit base werden nur die angegebenen Felder geändert, der Rest bleibt.
+    """
+    def get(key, default=None):
+        if key in data:
+            return data[key]
+        return default
+
+    old = base.pattern if base else Pattern(Freq.DAILY)
+    pattern = Pattern(
+        freq=Freq(get("freq", old.freq)),
+        interval=get("interval", old.interval) or 1,
+        weekdays=tuple(sorted(get("weekdays", old.weekdays) or ())),
+        monthly_by=MonthlyBy(get("monthly_by", old.monthly_by)),
+    )
+    if pattern.freq != Freq.WEEKLY:
+        pattern = replace(pattern, weekdays=())
+    end_type = EndType(get("end_type", base.end_type if base else EndType.NEVER))
+    return Series(
+        id=base.id if base else None,
+        task_id=task_id,
+        pattern=pattern,
+        starts_on=get("starts_on", base.starts_on if base else None),
+        end_type=end_type,
+        until_date=get("until_date", base.until_date if base else None) if end_type == EndType.UNTIL else None,
+        count=get("count", base.count if base else None) if end_type == EndType.COUNT else None,
+        tier=Tier(get("tier", base.tier if base else Tier.MUST)),
+        scope=Scope(get("scope", base.scope if base else Scope.DAY)),
+        start_minute=get("start_minute", base.start_minute if base else None),
+        duration_minutes=get("duration_minutes", base.duration_minutes if base else None),
+        carry_over=bool(get("carry_over", base.carry_over if base else False)),
+        exdates=base.exdates if base else frozenset(),
+    )
+
+
+def create_series(conn, data: dict, today: date, now: datetime) -> Series:
+    """Neue Serie mit Vorlage-Aufgabe anlegen und Einträge erzeugen."""
+    series = build_series(0, data)
+    validate(series)
+    title, tags = parse_quick_input(data["text"])
+    task_id = create_task(conn, title, now, data.get("notes", ""),
+                          data.get("estimated_minutes"), [*tags, *data.get("tags", [])])
+    series = replace(series, task_id=task_id)
+    series = replace(series, id=repo.insert_series(conn, series))
+    generate(conn, series, today, now)
+    return series
+
+
+def preview_series(data: dict) -> list[date]:
+    """V-8: die nächsten Vorkommen ab Start."""
+    series = build_series(0, data)
+    validate(series)
+    return preview(series)
+
+
+def _horizon_start(series: Series, today: date) -> date:
+    """Ab hier gelten Vorkommen als "künftig" (bei Wochen: diese Woche)."""
+    return week_start(today) if series.scope == Scope.WEEK else today
+
+
+def series_payload(conn, series: Series, today: date) -> dict:
+    task = task_payload(conn, series.task_id)
+    upcoming = occurrences(series, max(_horizon_start(series, today), series.starts_on),
+                           today + timedelta(days=366 * 3))
+    return {
+        "id": series.id,
+        "task": task,
+        "title": task["title"],
+        "freq": series.pattern.freq.value,
+        "interval": series.pattern.interval,
+        "weekdays": list(series.pattern.weekdays),
+        "monthly_by": series.pattern.monthly_by.value,
+        "starts_on": series.starts_on.isoformat(),
+        "end_type": series.end_type.value,
+        "until_date": series.until_date.isoformat() if series.until_date else None,
+        "count": series.count,
+        "tier": series.tier.value,
+        "scope": series.scope.value,
+        "start_minute": series.start_minute,
+        "duration_minutes": series.duration_minutes,
+        "carry_over": series.carry_over,
+        "next_occurrence": upcoming[0].isoformat() if upcoming else None,
+    }
+
+
+def list_series(conn, today: date) -> list[dict]:
+    return [series_payload(conn, s, today) for s in repo.all_series(conn)]
+
+
+def get_series(conn, series_id: int) -> Series:
+    series = repo.get_series(conn, series_id)
+    if series is None:
+        raise NotFound
+    return series
+
+
+def set_carry_over(conn, series_id: int, value: bool) -> Series:
+    series = replace(get_series(conn, series_id), carry_over=value)
+    repo.update_series(conn, series)
+    return series
+
+
+def end_series_now(conn, series_id: int, today: date) -> Series:
+    """R-26 / V-5: Serie endet heute; offene Vorkommen ab morgen verschwinden."""
+    series = end_series(get_series(conn, series_id), today)
+    repo.update_series(conn, series)
+    for e in repo.entries_for_series(conn, series.id):
+        if e.status == Status.OPEN and e.period_start > _horizon_start(series, today):
+            _delete_entry_and_copy(conn, e, series)
+    return series
+
+
+def _delete_entry_and_copy(conn, e: Entry, series: Series | None) -> None:
+    """Eintrag löschen; eine eigene Aufgaben-Kopie (R-25) wird mitgelöscht."""
+    repo.delete_entry(conn, e.id)
+    if (series is None or e.task_id != series.task_id) and repo.task_is_unused(conn, e.task_id):
+        repo.delete_task(conn, e.task_id)
+
+
+def _drop_future(conn, series: Series, first: date, keep_exceptions: bool = True) -> None:
+    """Offene Vorkommen ab einem Datum entfernen (Ausnahmen bleiben, R-17)."""
+    for e in repo.entries_for_series(conn, series.id):
+        if (e.status == Status.OPEN and e.occurrence_date >= first
+                and not (keep_exceptions and e.is_exception)):
+            _delete_entry_and_copy(conn, e, series)
+
+
+TEXT_FIELDS = ("title", "notes", "estimated_minutes", "tags")
+
+
+def _apply_text(conn, task_id: int, data: dict, copy: bool, now: datetime) -> int:
+    """Titel, Notiz, Dauer, Tags ändern. Mit copy=True entsteht eine neue Aufgabe
+    (R-25), sonst wird die bestehende geändert. Gibt die Aufgaben-ID zurück."""
+    if not any(k in data for k in TEXT_FIELDS):
+        return task_id
+    current = task_payload(conn, task_id)
+    new = {k: data.get(k, current[k]) for k in TEXT_FIELDS}
+    if all(new[k] == current[k] for k in TEXT_FIELDS if k != "tags") and \
+            sorted(new["tags"]) == sorted(current["tags"]):
+        return task_id  # nichts geändert
+    if copy:
+        return create_task(conn, new["title"], now, new["notes"], new["estimated_minutes"],
+                           new["tags"])
+    update_task(conn, task_id, new["title"], new["notes"], new["estimated_minutes"], new["tags"])
+    return task_id
+
+
+def edit_occurrence(conn, entry_id: int, mode: str, data: dict,
+                    today: date, now: datetime) -> Entry:
+    """R-17: ein Vorkommen bearbeiten – "this", "following" oder "all".
+
+    data enthält nur die Felder, die das Formular mitschickt.
+    """
+    e = repo.get_entry(conn, entry_id)
+    if e is None:
+        raise NotFound
+    if e.series_id is None:
+        raise ValueError("Der Eintrag gehört zu keiner Serie.")
+    series = get_series(conn, e.series_id)
+
+    if mode == "following" and e.occurrence_date <= series.starts_on:
+        mode = "all"  # ab dem ersten Vorkommen ist "folgende" dasselbe wie "alle"
+
+    if mode == "this":
+        # Text: eigene Kopie, solange das Vorkommen noch die Vorlage teilt (R-25)
+        e = replace(e, task_id=_apply_text(conn, e.task_id, data,
+                                           copy=e.task_id == series.task_id, now=now))
+        if data.get("tier"):
+            e = replace(e, tier=Tier(data["tier"]))
+        if data.get("day") and data["day"] != e.period_start:
+            e = move_entry_to_day(e, data["day"], today)
+            _move_block_with_entry(conn, e, now)
+        e = replace(e, is_exception=True)
+        repo.update_entry(conn, e)
+        if "start_minute" in data:
+            _set_time(conn, e, data["start_minute"], data.get("duration_minutes"), today, now)
+        return repo.get_entry(conn, e.id)
+
+    if mode == "all":
+        _apply_text(conn, series.task_id, data, copy=False, now=now)
+        updated = build_series(series.task_id, data, base=series)
+        validate(updated)
+        repo.update_series(conn, updated)
+        _drop_future(conn, series, _horizon_start(series, today))
+        generate(conn, updated, today, now)
+        target_series = updated
+    elif mode == "following":
+        old, new = split_series(series, e.occurrence_date)
+        task_id = _apply_text(conn, series.task_id, data, copy=True, now=now)
+        new = build_series(task_id, {k: v for k, v in data.items() if k != "starts_on"}, base=new)
+        new = replace(new, id=None)
+        validate(new)
+        repo.update_series(conn, old)
+        new = replace(new, id=repo.insert_series(conn, new))
+        _drop_future(conn, series, e.occurrence_date)
+        generate(conn, new, today, now)
+        target_series = new
+    else:
+        raise ValueError("Unbekannte Art der Bearbeitung.")
+
+    # Offene Vorkommen wurden neu erzeugt: das bearbeitete wiederfinden
+    # (gleiches Datum in der geänderten bzw. neuen Serie).
+    current = repo.get_entry(conn, entry_id)
+    if current and current.series_id == target_series.id:
+        return current
+    for x in repo.entries_for_series(conn, target_series.id):
+        if x.occurrence_date == e.occurrence_date:
+            return x
+    return current or e
+
+
+def _set_time(conn, e: Entry, start_minute: int | None, duration: int | None,
+              today: date, now: datetime) -> None:
+    """Uhrzeit eines einzelnen Vorkommens setzen oder entfernen."""
+    block = repo.blocks_for_entries(conn, [e.id]).get(e.id)
+    if start_minute is None:
+        if block:
+            repo.delete_block(conn, block.id)
+        return
+    end = None
+    if duration:
+        end = min(start_minute + duration, 24 * 60)
+    schedule_entry(conn, e.id, e.period_start, start_minute, end, today, now)
+
+
+def delete_occurrence(conn, entry_id: int, mode: str, today: date) -> None:
+    """R-17 Löschen: "this", "following" oder "all" (R-28)."""
+    e = repo.get_entry(conn, entry_id)
+    if e is None:
+        raise NotFound
+    if e.series_id is None:
+        raise ValueError("Der Eintrag gehört zu keiner Serie.")
+    series = get_series(conn, e.series_id)
+    if mode == "following" and e.occurrence_date <= series.starts_on:
+        mode = "all"
+
+    if mode == "this":
+        # Datum merken, damit das Vorkommen nicht neu erzeugt wird
+        repo.update_series(conn, replace(series, exdates=series.exdates | {e.occurrence_date}))
+        _delete_entry_and_copy(conn, e, series)
+    elif mode == "following":
+        old, _ = split_series(series, e.occurrence_date)
+        repo.update_series(conn, old)
+        _drop_future(conn, series, e.occurrence_date)
+    elif mode == "all":
+        delete_series(conn, series.id)
+    else:
+        raise ValueError("Unbekannte Art des Löschens.")
+
+
+def delete_series(conn, series_id: int) -> None:
+    """R-28: Serie mit allen offenen und verpassten Vorkommen löschen; erledigte bleiben."""
+    series = get_series(conn, series_id)
+    for e in repo.entries_for_series(conn, series.id):
+        if e.status != Status.DONE:
+            _delete_entry_and_copy(conn, e, series)
+    repo.delete_series(conn, series.id)   # erledigte behalten ihren Eintrag ohne Serie
+    if repo.task_is_unused(conn, series.task_id):
+        repo.delete_task(conn, series.task_id)
