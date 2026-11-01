@@ -82,6 +82,42 @@ MIGRATIONS: list[str] = [
     ALTER TABLE entry ADD COLUMN is_exception INTEGER NOT NULL DEFAULT 0;
     CREATE INDEX entry_series ON entry (series_id, occurrence_date);
     """,
+    # 4: Google lesen (M4) – Fremdtermine, Kalender, Sync-Stand, Einstellungen
+    """
+    CREATE TABLE setting (
+        key   TEXT PRIMARY KEY,   -- z.B. timasy_calendar_id
+        value TEXT
+    );
+
+    -- Kalender des Google-Kontos (für die Auswahl in den Einstellungen)
+    CREATE TABLE google_calendar (
+        id       TEXT PRIMARY KEY,
+        summary  TEXT NOT NULL,
+        color    TEXT,
+        selected INTEGER NOT NULL DEFAULT 0   -- S-4: nur gewählte werden gelesen
+    );
+
+    -- SyncState: pro Kalender Sync-Token und letzter Abgleich
+    CREATE TABLE sync_state (
+        calendar_id    TEXT PRIMARY KEY,
+        sync_token     TEXT,
+        window_start   TEXT,     -- Datum, ab dem das Zeitfenster beim letzten Vollabgleich galt
+        last_synced_at TEXT
+    );
+
+    -- Zwischenspeicher der Fremdtermine (nur lesen)
+    CREATE TABLE external_event (
+        calendar_id     TEXT NOT NULL,
+        google_event_id TEXT NOT NULL,
+        title           TEXT NOT NULL,
+        start           TEXT NOT NULL,     -- ISO-Zeit mit Zeitzone
+        "end"           TEXT NOT NULL,
+        all_day         INTEGER NOT NULL DEFAULT 0,
+        updated         TEXT,
+        PRIMARY KEY (calendar_id, google_event_id)
+    );
+    CREATE INDEX external_event_start ON external_event (start);
+    """,
 ]
 
 

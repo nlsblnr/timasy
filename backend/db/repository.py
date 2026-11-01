@@ -4,10 +4,11 @@ Hier steht nur SQL, keine Fachlogik. Einträge werden als domain.Entry
 zurückgegeben, damit die Fachlogik direkt damit arbeiten kann.
 """
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Iterable
 
 from ..domain.blocks import Block
+from ..domain.external import ExternalEvent, Key
 from ..domain.models import Entry, Scope, Status, Tier
 from ..domain.series import EndType, Series, from_rrule, to_rrule
 from ..domain.tags import normalize_tag
@@ -334,3 +335,121 @@ def all_series(conn) -> list[Series]:
 
 def delete_series(conn, series_id: int) -> None:
     conn.execute("DELETE FROM series WHERE id = ?", (series_id,))
+
+
+# --- Einstellungen -------------------------------------------------------------
+
+def get_setting(conn, key: str) -> str | None:
+    row = conn.execute("SELECT value FROM setting WHERE key = ?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def set_setting(conn, key: str, value: str | None) -> None:
+    conn.execute("INSERT INTO setting (key, value) VALUES (?, ?) "
+                 "ON CONFLICT (key) DO UPDATE SET value = excluded.value", (key, value))
+
+
+# --- Google-Kalender und Sync-Stand -------------------------------------------
+
+def save_calendars(conn, calendars: list[dict]) -> None:
+    """Kalenderliste von Google übernehmen; die Auswahl bleibt erhalten."""
+    ids = [c["id"] for c in calendars]
+    for c in calendars:
+        conn.execute(
+            "INSERT INTO google_calendar (id, summary, color) VALUES (?, ?, ?) "
+            "ON CONFLICT (id) DO UPDATE SET summary = excluded.summary, color = excluded.color",
+            (c["id"], c["summary"], c.get("color")))
+    marks = ",".join("?" * len(ids)) or "''"
+    gone = [r["id"] for r in conn.execute(
+        f"SELECT id FROM google_calendar WHERE id NOT IN ({marks})", ids)]
+    for cal_id in gone:  # in Google entfernte Kalender
+        forget_calendar(conn, cal_id)
+        conn.execute("DELETE FROM google_calendar WHERE id = ?", (cal_id,))
+
+
+def calendars(conn) -> list[dict]:
+    rows = conn.execute("SELECT * FROM google_calendar ORDER BY summary COLLATE NOCASE")
+    return [dict(r) | {"selected": bool(r["selected"])} for r in rows]
+
+
+def set_calendar_selected(conn, calendar_id: str, selected: bool) -> bool:
+    cur = conn.execute("UPDATE google_calendar SET selected = ? WHERE id = ?",
+                       (int(selected), calendar_id))
+    if not selected:
+        forget_calendar(conn, calendar_id)
+    return cur.rowcount == 1
+
+
+def selected_calendar_ids(conn) -> list[str]:
+    return [r["id"] for r in conn.execute("SELECT id FROM google_calendar WHERE selected = 1")]
+
+
+def forget_calendar(conn, calendar_id: str) -> None:
+    """Zwischenspeicher und Sync-Stand eines Kalenders löschen."""
+    conn.execute("DELETE FROM external_event WHERE calendar_id = ?", (calendar_id,))
+    conn.execute("DELETE FROM sync_state WHERE calendar_id = ?", (calendar_id,))
+
+
+def get_sync_state(conn, calendar_id: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM sync_state WHERE calendar_id = ?", (calendar_id,)).fetchone()
+
+
+def save_sync_state(conn, calendar_id: str, sync_token: str | None, window_start: date,
+                    synced_at: datetime) -> None:
+    conn.execute(
+        "INSERT INTO sync_state (calendar_id, sync_token, window_start, last_synced_at) "
+        "VALUES (?, ?, ?, ?) ON CONFLICT (calendar_id) DO UPDATE SET "
+        "sync_token = excluded.sync_token, window_start = excluded.window_start, "
+        "last_synced_at = excluded.last_synced_at",
+        (calendar_id, sync_token, window_start.isoformat(), synced_at.isoformat()))
+
+
+def last_synced_at(conn) -> str | None:
+    return conn.execute("SELECT MAX(last_synced_at) FROM sync_state").fetchone()[0]
+
+
+# --- Fremdtermine --------------------------------------------------------------
+
+def _to_external(row) -> ExternalEvent:
+    return ExternalEvent(
+        calendar_id=row["calendar_id"],
+        google_event_id=row["google_event_id"],
+        title=row["title"],
+        start=datetime.fromisoformat(row["start"]),
+        end=datetime.fromisoformat(row["end"]),
+        all_day=bool(row["all_day"]),
+        updated=datetime.fromisoformat(row["updated"]) if row["updated"] else None,
+    )
+
+
+def external_events_for_calendar(conn, calendar_id: str) -> dict[Key, ExternalEvent]:
+    rows = conn.execute("SELECT * FROM external_event WHERE calendar_id = ?", (calendar_id,))
+    return {(r["calendar_id"], r["google_event_id"]): _to_external(r) for r in rows}
+
+
+def save_external_events(conn, upserts: list[ExternalEvent], deletes: set[Key]) -> None:
+    for key in deletes:
+        conn.execute("DELETE FROM external_event WHERE calendar_id = ? AND google_event_id = ?", key)
+    for e in upserts:
+        conn.execute(
+            'INSERT INTO external_event (calendar_id, google_event_id, title, start, "end", '
+            "all_day, updated) VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT (calendar_id, google_event_id) DO UPDATE SET title = excluded.title, "
+            'start = excluded.start, "end" = excluded."end", all_day = excluded.all_day, '
+            "updated = excluded.updated",
+            (e.calendar_id, e.google_event_id, e.title, e.start.isoformat(), e.end.isoformat(),
+             int(e.all_day), e.updated.isoformat() if e.updated else None))
+
+
+def external_events_between(conn, first: date, last: date) -> list[ExternalEvent]:
+    """Termine aus gewählten Kalendern, die Tage von first bis last berühren.
+
+    Gespeichert wird mit Zeitzonen-Versatz; für den groben Vergleich als Text
+    nehmen wir je einen Tag Reserve und filtern danach genau (events_on_day).
+    """
+    lo = (first - timedelta(days=1)).isoformat()
+    hi = (last + timedelta(days=2)).isoformat()
+    rows = conn.execute(
+        'SELECT e.* FROM external_event e JOIN google_calendar c ON c.id = e.calendar_id '
+        'WHERE c.selected = 1 AND e."end" > ? AND e.start < ? ORDER BY e.start', (lo, hi))
+    return [_to_external(r) for r in rows]
