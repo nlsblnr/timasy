@@ -4,7 +4,8 @@ Damit Timasy deine Google-Termine lesen und später (M5) seine Blöcke in einen
 eigenen Kalender „Timasy“ schreiben kann, brauchst du ein eigenes, kostenloses
 Google-Cloud-Projekt. Das dauert etwa 15 Minuten und ist nur einmal nötig.
 
-Die Schritte folgen der Google-Dokumentation (Stand Oktober 2026). Die Google
+Die Schritte folgen der Google-Dokumentation (Stand Oktober 2026) und wurden
+im November 2026 an der deutschen Oberfläche der Console nachgeführt. Die Google
 Cloud Console ist manchmal auf Englisch, manchmal auf Deutsch; die Begriffe
 stehen deshalb in beiden Sprachen, wo sie sich unterscheiden.
 
@@ -37,38 +38,34 @@ stehen deshalb in beiden Sprachen, wo sie sich unterscheiden.
 5. **Finish:** der „Google API Services: User Data Policy“ zustimmen →
    **Continue** → **Create**.
 
-## 4. Berechtigungen eintragen (Data Access)
+## 4. Dich selbst als Testnutzer eintragen
 
-Timasy fragt nur diese drei Berechtigungen an (S-2):
+Das Projekt bleibt im Status **Test / Testing** (S-1). Dann dürfen sich nur
+Konten anmelden, die als Testnutzer eingetragen sind:
+
+1. **Google Auth Platform** → **Zielgruppe / Audience**.
+2. Bei **Testnutzer / Test users** auf **Nutzer hinzufügen / Add users** klicken,
+   deine Gmail-Adresse eintragen und **Speichern / Save**.
+
+Unter **Datenzugriff / Data Access** musst du nichts eintragen. Timasy fragt
+seine drei Berechtigungen bei der Anmeldung selbst an (S-2):
 
 | Berechtigung | Wozu |
 |---|---|
-| `https://www.googleapis.com/auth/calendar.calendarlist.readonly` | Liste deiner Kalender sehen (für die Auswahl) |
-| `https://www.googleapis.com/auth/calendar.events.readonly` | Termine lesen (nur aus den Kalendern, die du in Timasy auswählst) |
-| `https://www.googleapis.com/auth/calendar.app.created` | eigenen Kalender „Timasy“ anlegen und nur darin Termine ändern |
+| `calendar.calendarlist.readonly` | Liste deiner Kalender sehen (für die Auswahl) |
+| `calendar.events.readonly` | Termine lesen (nur aus den Kalendern, die du in Timasy auswählst) |
+| `calendar.app.created` | eigenen Kalender „Timasy“ anlegen und nur darin Termine ändern |
 
-1. **Google Auth Platform** → **Data Access** → **Add or Remove Scopes**.
-2. Unten bei **Manually add scopes** die drei Zeilen oben einfügen →
-   **Add to table** → **Update** → **Save**.
+## 5. Gut zu wissen: Anmeldung gilt 7 Tage
 
-Dieser Schritt ist für die Anmeldung nicht zwingend, macht aber den
-Zustimmungsbildschirm übersichtlicher.
+Im Status Testing lässt Google die Anmeldung nach **7 Tagen** ablaufen
+(Google-Dokumentation zu OAuth 2.0). Timasy zeigt dann oben „Neu verbinden“;
+ein Klick darauf und eine Bestätigung im Browser genügen.
 
-## 5. App auf „In Produktion“ stellen
-
-Solange das Projekt im Status **Testing** ist, lässt Google die Anmeldung nach
-**7 Tagen** ablaufen (Google-Dokumentation zu OAuth 2.0). Deshalb:
-
-1. **Google Auth Platform** → **Audience**.
-2. Bei **Publishing status** auf **Publish app** klicken und bestätigen.
-   Der Status lautet danach **In production**.
-
-Für die eigene Nutzung ist keine Prüfung durch Google nötig. Google zeigt bei
-der Anmeldung einmal den Hinweis, dass die App nicht überprüft ist (Schritt 8).
-
-*Falls du lieber im Status Testing bleibst:* Unter **Audience** → **Test users**
-→ **Add users** deine E-Mail-Adresse eintragen. Timasy zeigt dann alle 7 Tage
-„Neu verbinden“.
+*Warum nicht veröffentlichen?* Für „App veröffentlichen“ verlangt Google auf der
+Seite **Branding** eine Startseite und eine Datenschutzerklärung auf einer
+eigenen Domain. „Intern“ ist nur für Google-Workspace-Organisationen möglich,
+nicht für ein Gmail-Konto.
 
 ## 6. Zugangsdaten für die Desktop-App erstellen
 
@@ -101,9 +98,10 @@ Move-Item "$env:USERPROFILE\Downloads\client_secret_*.json" data\google\credenti
 1. Timasy starten (`.venv\Scripts\python run.py`) und **Einstellungen** öffnen
    (Taste `e`).
 2. **Mit Google verbinden** klicken. Es öffnet sich ein Browserfenster.
-3. Google-Konto wählen. Erscheint „Google hat diese App nicht überprüft“:
-   **Erweitert** → **Weiter zu Timasy (unsicher)**. Das ist hier in Ordnung:
-   Es ist deine eigene App auf deinem eigenen Computer.
+3. Google-Konto wählen. Google weist darauf hin, dass die App nicht überprüft
+   ist bzw. sich im Test befindet: **Weiter / Continue** (bei manchen Varianten
+   zuerst **Erweitert**). Das ist hier in Ordnung: Es ist deine eigene App auf
+   deinem eigenen Computer.
 4. Die Berechtigungen bestätigen. Danach steht im Browser „Timasy ist mit
    Google verbunden“; das Fenster kannst du schliessen.
 5. Zurück in Timasy legt der erste Abgleich den Kalender **„Timasy“** in deinem
@@ -117,11 +115,10 @@ Die Termine erscheinen grau in Heute, Woche und Monat. Änderungen in Google
 
 ## Wenn etwas nicht klappt
 
-- **„Zugriff blockiert“ / „Access blocked“ bei der Anmeldung:** Das Projekt ist
-  noch im Status Testing, und deine E-Mail-Adresse ist nicht als Testnutzer
-  eingetragen. Schritt 5 ausführen.
-- **Timasy zeigt „Neu verbinden“:** Der Zugang ist abgelaufen oder wurde
-  widerrufen. Auf **Neu verbinden** klicken und Schritt 8 wiederholen.
+- **„Zugriff blockiert“ / „Access blocked“ bei der Anmeldung:** Deine
+  E-Mail-Adresse ist nicht als Testnutzer eingetragen. Schritt 4 ausführen.
+- **Timasy zeigt „Neu verbinden“:** Normal nach 7 Tagen (Schritt 5), oder der
+  Zugang wurde widerrufen. Auf **Neu verbinden** klicken und bestätigen.
 - **„Noch nicht eingerichtet“:** Die Datei liegt nicht unter
   `data/google/credentials.json` oder heisst anders.
 - **Zugriff entziehen:** In Timasy **Verbindung trennen**; zusätzlich unter
