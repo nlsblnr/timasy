@@ -39,7 +39,7 @@
   <label>Notiz <textarea rows="3" bind:value={form.notes}></textarea></label>
   <div class="two">
     <label>Geschätzte Dauer (Minuten)
-      <input type="number" min="1" step="5" bind:value={form.minutes} />
+      <input type="number" min="1" step="1" bind:value={form.minutes} />
     </label>
     <label>Tags <TagInput bind:value={form.tags} /></label>
   </div>

@@ -115,9 +115,12 @@
           <input type="date" bind:value={date} required />
         </label>
       {/if}
-      <label>Dauer (Minuten) <input type="number" min="1" step="5" bind:value={minutes} /></label>
+      <label>Dauer (Minuten) <input type="number" min="1" step="1" bind:value={minutes} /></label>
       <label class="wide">Notiz <textarea rows="2" bind:value={notes}></textarea></label>
       <label class="wide">Weitere Tags <TagInput bind:value={tags} /></label>
+      <!-- Ein Absende-Knopf sorgt auch dafür, dass Enter in jedem Feld speichert:
+           Browser senden ein Formular mit mehreren Feldern nur mit so einem Knopf ab. -->
+      <div class="wide submit"><button type="submit" class="filled">Hinzufügen</button></div>
     </div>
   {/if}
 </form>
@@ -136,4 +139,5 @@
   .suggestions { display: flex; gap: 6px; flex-wrap: wrap; }
   .details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .wide { grid-column: 1 / -1; }
+  .submit { display: flex; justify-content: flex-end; }
 </style>

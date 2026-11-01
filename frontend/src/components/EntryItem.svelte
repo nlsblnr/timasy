@@ -10,6 +10,16 @@
   // assignTo: optional, ein Tag, dem ein Wochen-Eintrag zugewiesen werden kann (R-6)
   let { entry, assignTo = null, assignLabel = '' } = $props()
   let editing = $state(false)
+  let menu  // das <details>-Element des Menüs "⋯"
+
+  // Menü schliessen bei Klick ausserhalb oder auf einen Menüpunkt und mit Esc.
+  // (Ein <details>-Element schliesst sich sonst nur über einen Klick auf "⋯".)
+  function closeMenu(event) {
+    if (!menu?.open) return
+    if (event.type === 'keydown' ? event.key === 'Escape' : !menu.querySelector('summary').contains(event.target)) {
+      menu.open = false
+    }
+  }
   let done = $derived(entry.status === 'done')
   // Offene Einträge lassen sich auf einen Tag oder eine Uhrzeit ziehen (V-1, V-2)
   let draggable = $derived(!done)
@@ -35,6 +45,8 @@
   const remove = () => call(() => api.removeEntry(entry.id))
 </script>
 
+<svelte:window onclick={closeMenu} onkeydown={closeMenu} />
+
 <li class="entry" class:done {draggable} {ondragstart}>
   <div class="main">
     <input type="checkbox" checked={done} onchange={toggleDone}
@@ -54,7 +66,7 @@
       {/if}
       <button class="text" onclick={toggleTier}
               title="Stufe wechseln">{entry.tier === 'must' ? '→ Bonus' : '→ Pflicht'}</button>
-      <details class="more">
+      <details class="more" bind:this={menu}>
         <summary class="icon" title="Mehr">⋯</summary>
         <div class="menu">
           <button class="text" onclick={() => (editing = true)}>Bearbeiten</button>
