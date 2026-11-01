@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.4 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.5 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -123,7 +123,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **S-1 Anmeldung:** OAuth 2.0 für Desktop-Apps. Einmalige Einrichtung: eigenes Google-Cloud-Projekt, Calendar API aktivieren, Zugangsdaten vom Typ „Desktop-App“ erstellen. Claude liefert dafür in Meilenstein M4 eine Schritt-für-Schritt-Anleitung.
 - **S-2 Berechtigungen:** so gering wie möglich: alle Kalender lesen; Schreiben nur im von Timasy angelegten Kalender. Die aktuellen Bezeichnungen der Berechtigungen prüft Claude bei der Umsetzung in der Google-Dokumentation.
 - **S-3 \[Entscheid\] Eigener Kalender:** Beim ersten Sync legt Timasy einen Kalender „Timasy“ an und merkt sich dessen ID. Alle Blöcke leben nur dort.
-- **S-4 Fremdtermine lesen:** aus den in den Einstellungen gewählten Kalendern (Standard: alle sichtbaren ausser dem Timasy-Kalender). Zeitfenster 30 Tage zurück bis 365 Tage voraus. Abgleich inkrementell über Sync-Token; ist der Token ungültig, wird neu abgeglichen. Wiederkehrende Fremdtermine erscheinen als einzelne Vorkommen. Ganztägige Termine werden als Streifen am Tagesanfang dargestellt.
+- **S-4 Fremdtermine lesen:** \[Entscheid v0.5\] nur aus den Kalendern, die in den Einstellungen ausdrücklich gewählt sind (Standard: keiner; der Timasy-Kalender ist nie wählbar). Gespeichert werden Titel und Zeiten. Zeitfenster: ab heute bis 90 Tage voraus, keine vergangenen Tage. Abgleich inkrementell über Sync-Token; ist der Token ungültig, wird neu abgeglichen. Wiederkehrende Fremdtermine erscheinen als einzelne Vorkommen. Ganztägige Termine werden als Streifen am Tagesanfang dargestellt.
 - **S-5 Zuordnung:** Jeder Block entspricht genau einem Ereignis im Timasy-Kalender. Das Ereignis trägt private Zusatzfelder mit Block-ID und Eintrags-ID, der Block speichert die Google-Ereignis-ID.
 - **S-6 \[Annahme\] Was synchronisiert wird:** Die Zeit (Start und Ende) in beide Richtungen. Titel und Beschreibung (diese enthält die Stufe, z.B. „Pflicht“) nur von Timasy nach Google; Änderungen daran in Google werden beim nächsten Abgleich überschrieben.
 - **S-7 \[Entscheid\] Konflikte:** Verschiebst du einen Block in Google (z.B. am Handy), übernimmt Timasy die neue Zeit. Sind beide Seiten seit dem letzten Abgleich geändert, gewinnt die zuletzt gemachte Änderung.
@@ -185,7 +185,7 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
 - **A-7 Berechtigungen und Anmeldung:** Die Bezeichnungen der Google-Berechtigungen und das Verhalten der Anmeldung im Testmodus (Ablauf der Zugangstokens) werden in M4 gegen die aktuelle Google-Dokumentation geprüft.
 - **A-8 Serien in Google:** Einzelne Ereignisse statt Google-Serien (S-11).
-- **A-9 Planungshorizont:** 90 Tage für Serien (R-16, *bestätigt v0.4*), Fenster 30/365 Tage für Fremdtermine (S-4).
+- **A-9 Planungshorizont:** 90 Tage für Serien (R-16, *bestätigt v0.4*); Fremdtermine ab heute bis 90 Tage voraus (S-4, *entschieden v0.5*).
 
 ## 13. Spätere Ideen (nicht Teil von Version 1)
 
@@ -202,3 +202,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **01.11.2026:** M2 abgenommen. Korrekturen: Enter speichert auch im erweiterten Dialog; Menü „⋯“ schliesst bei Klick ausserhalb.
 - **01.11.2026, v0.4:** Vor Beginn von M3: R-16, R-18 und A-9 übernommen (keine Präferenz, Vorschlag gilt). Neu: R-24 Wochen-Serien nur alle n Wochen; R-25 einzelnes Vorkommen voll änderbar; R-26 Serie beenden ab morgen. Zur Prüfung: R-27 bis R-29.
 - **01.11.2026:** Bestätigt: R-16, R-18, A-9, R-24, R-25 wie umgesetzt; R-27 bis R-29 als Entscheid übernommen.
+- **01.11.2026:** M3 abgenommen. Rückfrage vor dem Löschen einer Serie ergänzt.
+- **01.11.2026, v0.5:** Vor Beginn von M4 (S-4): Fremdtermine nur aus ausdrücklich gewählten Kalendern (Standard keiner), Titel und Zeiten werden gespeichert, Zeitfenster ab heute bis 90 Tage voraus (vorher: alle sichtbaren Kalender, 30 Tage zurück bis 365 voraus).
