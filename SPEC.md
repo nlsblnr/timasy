@@ -92,9 +92,9 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **R-24 \[Entscheid\]** Serien mit Zeitraum Woche wiederholen sich nur wöchentlich bzw. alle n Wochen; Wochentage und Uhrzeit gibt es dafür nicht. Jedes Vorkommen ist ein Wochen-Eintrag.
 - **R-25 \[Entscheid\]** Bei „nur dieses Vorkommen“ ist alles änderbar: Stufe, Tag, Uhrzeit sowie Titel, Notiz und Tags. Ändert sich der Text, erhält das Vorkommen eine eigene Kopie der Aufgabe; die übrigen Vorkommen behalten den Text der Serie.
 - **R-26 \[Entscheid\]** „Serie beenden“ (V-5) setzt das Ende auf heute: Offene Vorkommen ab morgen werden entfernt; heutige und vergangene bleiben.
-- **R-27 \[Annahme\]** Abhaken ist keine Änderung. Andere Änderungen an einem einzelnen Vorkommen ausserhalb des Serien-Dialogs (Stufe umschalten, Block ziehen, Tag ändern, Block entfernen) gelten als „nur dieses Vorkommen“. „Aus Zeitraum entfernen“ löscht nur dieses Vorkommen.
-- **R-28 \[Annahme\]** „Löschen: alle“ entfernt die Serie und alle offenen und verpassten Vorkommen; erledigte bleiben als Verlauf erhalten. „Dieses und alle folgenden“ lässt Ausnahmen (R-17) bestehen, wie bei „alle“.
-- **R-29 \[Annahme\]** Monatliche Serien wiederholen sich am Tag oder am n-ten Wochentag des Startdatums (z.B. Start Montag, 2.11. → „am 2.“ oder „am ersten Montag“), jährliche am Datum des Starts.
+- **R-27 \[Entscheid\]** Abhaken ist keine Änderung. Andere Änderungen an einem einzelnen Vorkommen ausserhalb des Serien-Dialogs (Stufe umschalten, Block ziehen, Tag ändern, Block entfernen) gelten als „nur dieses Vorkommen“. „Aus Zeitraum entfernen“ löscht nur dieses Vorkommen.
+- **R-28 \[Entscheid\]** „Löschen: alle“ entfernt die Serie und alle offenen und verpassten Vorkommen; erledigte bleiben als Verlauf erhalten. „Dieses und alle folgenden“ lässt Ausnahmen (R-17) bestehen, wie bei „alle“.
+- **R-29 \[Entscheid\]** Monatliche Serien wiederholen sich am Tag oder am n-ten Wochentag des Startdatums (z.B. Start Montag, 2.11. → „am 2.“ oder „am ersten Montag“), jährliche am Datum des Starts.
 
 ### Blöcke
 
@@ -201,3 +201,4 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **31.10.2026, v0.3:** Vor Beginn von M2 bestätigt: A-4/R-12 alter Block wird bei Übertragung gelöscht; R-19 und R-21 bestätigt. Neu R-23: Block auf anderen Tag verschieben nimmt den Eintrag mit; Überschneidungen eigener Blöcke erlaubt. V-2: Raster 15 Minuten, Zeitachse 0–24 Uhr, Start bei 7 Uhr.
 - **01.11.2026:** M2 abgenommen. Korrekturen: Enter speichert auch im erweiterten Dialog; Menü „⋯“ schliesst bei Klick ausserhalb.
 - **01.11.2026, v0.4:** Vor Beginn von M3: R-16, R-18 und A-9 übernommen (keine Präferenz, Vorschlag gilt). Neu: R-24 Wochen-Serien nur alle n Wochen; R-25 einzelnes Vorkommen voll änderbar; R-26 Serie beenden ab morgen. Zur Prüfung: R-27 bis R-29.
+- **01.11.2026:** Bestätigt: R-16, R-18, A-9, R-24, R-25 wie umgesetzt; R-27 bis R-29 als Entscheid übernommen.
