@@ -47,6 +47,8 @@ cd frontend && npm install && npm run build && cd ..
 - Tageswechsel simulieren: `TIMASY_TODAY=2026-11-05 .venv/bin/python run.py`
 - Andere Datenbankdatei (z.B. zum Ausprobieren): `TIMASY_DB=/tmp/test.db .venv/bin/python run.py`
 - Daten liegen in `data/timasy.db` (nicht im Repository).
+- Google: Einrichtung siehe `docs/google-einrichtung.md`; Zugangsdaten in `data/google/credentials.json`, Token in `data/google/token.json` (beides nie ins Repository).
+- Nach `git pull` mit neuen Abhängigkeiten: `pip install -r requirements.txt` erneut ausführen.
 
 Unter Windows (PowerShell; Befehle einzeln ausführen, ältere PowerShell kennt kein `&&`):
 ```powershell

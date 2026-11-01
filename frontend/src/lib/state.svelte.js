@@ -6,13 +6,14 @@
 import { api } from './api.js'
 
 export const app = $state({
-  view: 'today',          // 'today', 'week', 'month', 'backlog' oder 'series'
+  view: 'today',          // 'today', 'week', 'month', 'backlog', 'series' oder 'settings'
   today: null,            // heutiges Datum laut Backend
   date: null,             // angezeigter Tag; null = immer der heutige Tag
   tags: [],               // alle bestehenden Tags (für Vorschläge)
   version: 0,             // wird erhöht, wenn die Ansichten neu laden sollen
   error: '',
   pendingDelete: null,    // { taskId, title } während der Rückgängig-Frist
+  sync: null,             // Zustand des Google-Abgleichs (S-10)
 })
 
 export function reload() {
@@ -49,4 +50,17 @@ export function commitPendingDelete() {
   if (!pending) return
   app.pendingDelete = null
   api.deleteTask(pending.taskId).then(reload).catch(showError)
+}
+
+// --- Abgleich mit Google (S-9, S-10) ------------------------------------------
+// Der Zustand wird regelmässig abgefragt. Ist ein Abgleich fertig geworden,
+// laden die Ansichten neu, damit neue Termine erscheinen.
+
+export async function pollSync() {
+  try {
+    const status = await api.syncStatus()
+    const finished = app.sync && status.last_synced_at !== app.sync.last_synced_at
+    app.sync = status
+    if (finished) reload()
+  } catch {}
 }

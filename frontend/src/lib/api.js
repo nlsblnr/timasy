@@ -36,6 +36,14 @@ export const api = {
   schedule: (entryId, data) => request('POST', `/api/entries/${entryId}/schedule`, data),
   changeBlock: (id, data) => request('PATCH', `/api/blocks/${id}`, data),
   removeBlock: (id) => request('DELETE', `/api/blocks/${id}`),
+  // Google und Abgleich (M4)
+  syncStatus: () => request('GET', '/api/sync/status'),
+  syncNow: () => request('POST', '/api/sync'),
+  googleConnect: () => request('POST', '/api/google/connect'),
+  googleDisconnect: () => request('POST', '/api/google/disconnect'),
+  calendars: () => request('GET', '/api/google/calendars'),
+  selectCalendar: (id, selected) =>
+    request('PATCH', `/api/google/calendars/${encodeURIComponent(id)}`, { selected }),
   // Serien (M3)
   seriesList: () => request('GET', '/api/series'),
   getSeries: (id) => request('GET', `/api/series/${id}`),
