@@ -3,12 +3,14 @@
   // Rückgängig-Leiste und Fehlermeldungen.
   //
   // Tastenkürzel (wenn kein Eingabefeld aktiv ist):
-  //   n = Schnellerfassung, h = Heute, b = Backlog
+  //   n = Schnellerfassung, h = Heute, w = Woche, m = Monat, b = Backlog
   import { onMount } from 'svelte'
   import { app, commitPendingDelete, reload, undoDelete } from './lib/state.svelte.js'
   import QuickCapture from './components/QuickCapture.svelte'
   import Today from './views/Today.svelte'
   import Backlog from './views/Backlog.svelte'
+  import Month from './views/Month.svelte'
+  import Week from './views/Week.svelte'
 
   let quickOpen = $state(false)
 
@@ -20,6 +22,8 @@
     if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return
     if (e.key === 'n') { e.preventDefault(); quickOpen = true }
     if (e.key === 'h') app.view = 'today'
+    if (e.key === 'w') app.view = 'week'
+    if (e.key === 'm') app.view = 'month'
     if (e.key === 'b') app.view = 'backlog'
   }
 
@@ -45,6 +49,10 @@
     <span class="brand">Timasy</span>
     <button class="tab" class:active={app.view === 'today'} onclick={() => (app.view = 'today')}
             title="Heute (h)">Heute</button>
+    <button class="tab" class:active={app.view === 'week'} onclick={() => (app.view = 'week')}
+            title="Woche (w)">Woche</button>
+    <button class="tab" class:active={app.view === 'month'} onclick={() => (app.view = 'month')}
+            title="Monat (m)">Monat</button>
     <button class="tab" class:active={app.view === 'backlog'} onclick={() => (app.view = 'backlog')}
             title="Backlog (b)">Backlog</button>
     <span class="spacer"></span>
@@ -56,7 +64,10 @@
   {/if}
 
   <main>
-    {#if app.view === 'today'}<Today />{:else}<Backlog />{/if}
+    {#if app.view === 'today'}<Today />
+    {:else if app.view === 'week'}<Week />
+    {:else if app.view === 'month'}<Month />
+    {:else}<Backlog />{/if}
   </main>
 
   {#if app.pendingDelete}
@@ -71,7 +82,7 @@
 </div>
 
 <style>
-  .shell { max-width: 1100px; margin: 0 auto; padding: 16px 32px 96px; }
+  .shell { max-width: 1280px; margin: 0 auto; padding: 16px 32px 96px; }
   nav { display: flex; align-items: center; gap: 4px; margin-bottom: 24px; }
   .brand { font-weight: 700; margin-right: 16px; }
   .spacer { flex: 1; }

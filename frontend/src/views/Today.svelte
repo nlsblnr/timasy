@@ -1,13 +1,14 @@
 <script>
   // Heute-Ansicht (V-1): Datum, Fortschritt, Pflicht- und Bonus-Liste,
   // daneben "Diese Woche" mit offenen Wochen-Einträgen.
-  // Die Tages-Zeitleiste mit Blöcken und Terminen kommt in M2/M4.
+  // Daneben die Tages-Zeitleiste mit Blöcken; Fremdtermine folgen in M4.
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
   import { addDays, formatLong, formatShort, relativeLabel } from '../lib/dates.js'
   import EntryItem from '../components/EntryItem.svelte'
   import ProgressBar from '../components/ProgressBar.svelte'
   import TagFilter from '../components/TagFilter.svelte'
+  import TimeGrid from '../components/TimeGrid.svelte'
 
   let data = $state(null)
   let tagFilter = $state(null)
@@ -85,8 +86,13 @@
       {/if}
     </section>
 
-    <aside class="week">
-      <h2>Diese Woche</h2>
+    <aside class="side">
+      <h2>Zeitleiste</h2>
+      <p class="sub">Einträge hierher ziehen, um sie einzuplanen.</p>
+      <TimeGrid days={[data.date]} today={data.today} showHeader={false} height="420px"
+                entries={data.entries.filter((e) => e.task_id !== app.pendingDelete?.taskId)} />
+
+      <h2 class="weekhead">Diese Woche</h2>
       <p class="sub">ab {formatShort(data.week_start)}</p>
       <ProgressBar label="Wochenfortschritt" done={data.week_progress.must_done}
                    total={data.week_progress.must_total} ratio={data.week_progress.must_ratio} />
@@ -105,7 +111,7 @@
 {/if}
 
 <style>
-  .layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 48px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 48px; }
   @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
   header { display: grid; gap: 2px; margin-bottom: 20px; }
   .nav { display: flex; gap: 4px; align-items: center; }
@@ -115,10 +121,11 @@
   .minimum { margin: 0; color: var(--accent); font-weight: 600; }
   h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em;
        color: var(--muted); margin: 28px 0 4px; font-weight: 600; }
-  .week h2 { margin-top: 8px; }
+  .side h2 { margin-top: 8px; }
+  .side .weekhead { margin-top: 32px; }
   .sub { margin: 0 0 16px; color: var(--muted); font-size: 0.85rem; }
   ul { padding: 0; margin: 0; }
   .empty { color: var(--muted); font-size: 0.9rem; }
-  .week { border-left: 1px solid var(--line); padding-left: 32px; }
-  @media (max-width: 820px) { .week { border: none; padding: 0; } }
+  .side { border-left: 1px solid var(--line); padding-left: 32px; }
+  @media (max-width: 820px) { .side { border: none; padding: 0; } }
 </style>

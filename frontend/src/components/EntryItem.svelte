@@ -4,12 +4,20 @@
   import { api } from '../lib/api.js'
   import { overdueText } from '../lib/dates.js'
   import { deleteTaskWithUndo, reload, showError } from '../lib/state.svelte.js'
+  import { ENTRY_MIME, formatTime } from '../lib/timegrid.js'
   import TaskEditor from './TaskEditor.svelte'
 
   // assignTo: optional, ein Tag, dem ein Wochen-Eintrag zugewiesen werden kann (R-6)
   let { entry, assignTo = null, assignLabel = '' } = $props()
   let editing = $state(false)
   let done = $derived(entry.status === 'done')
+  // Offene Einträge lassen sich auf einen Tag oder eine Uhrzeit ziehen (V-1, V-2)
+  let draggable = $derived(!done)
+
+  function ondragstart(event) {
+    event.dataTransfer.setData(ENTRY_MIME, String(entry.id))
+    event.dataTransfer.effectAllowed = 'move'
+  }
 
   async function call(fn) {
     try {
@@ -27,13 +35,14 @@
   const remove = () => call(() => api.removeEntry(entry.id))
 </script>
 
-<li class="entry" class:done>
+<li class="entry" class:done {draggable} {ondragstart}>
   <div class="main">
     <input type="checkbox" checked={done} onchange={toggleDone}
            aria-label="{entry.title} abhaken" />
     <div class="text">
       <span class="title">{entry.title}</span>
       <span class="meta">
+        {#if entry.block}<span>{formatTime(entry.block.start_minute)}–{formatTime(entry.block.end_minute)}</span>{/if}
         {#if entry.overdue && !done}<span class="overdue">{overdueText(entry.overdue_days)}</span>{/if}
         {#if entry.task.estimated_minutes}<span>{entry.task.estimated_minutes} min</span>{/if}
         {#each entry.task.tags as tag}<span class="tag">#{tag}</span>{/each}
@@ -49,6 +58,11 @@
         <summary class="icon" title="Mehr">⋯</summary>
         <div class="menu">
           <button class="text" onclick={() => (editing = true)}>Bearbeiten</button>
+          {#if entry.block}
+            <button class="text" onclick={() => call(() => api.removeBlock(entry.block.id))}>
+              Nicht mehr einplanen
+            </button>
+          {/if}
           <button class="text" onclick={remove}>Aus Zeitraum entfernen</button>
           <button class="text" onclick={() => deleteTaskWithUndo(entry.task_id, entry.title)}>
             Aufgabe löschen
@@ -63,6 +77,7 @@
 </li>
 
 <style>
+  .entry[draggable='true'] { cursor: grab; }
   .entry { list-style: none; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
   .text { flex: 1 1 160px; display: grid; gap: 2px; min-width: 0; }

@@ -4,7 +4,7 @@
   //  - Tab: Stufe Pflicht/Bonus umschalten (oder Tag-Vorschlag übernehmen)
   //  - Esc: schliessen
   //  - "#name" im Titel fügt einen Tag hinzu
-  // In der Heute-Ansicht entsteht ein Eintrag für den angezeigten Tag,
+  // In Heute, Woche und Monat entsteht ein Eintrag für den angezeigten Tag,
   // im Backlog eine Aufgabe ohne Zeitraum. "Details" öffnet den erweiterten Dialog.
   import { api } from '../lib/api.js'
   import { app, reload, showError } from '../lib/state.svelte.js'
@@ -18,7 +18,7 @@
   let tier = $state('must')               // Standardstufe Pflicht (A-3)
   let extended = $state(false)
   // svelte-ignore state_referenced_locally
-  let period = $state(app.view === 'today' ? 'day' : 'none')   // 'day' | 'week' | 'none'
+  let period = $state(app.view === 'backlog' ? 'none' : 'day')   // 'day' | 'week' | 'none'
   // svelte-ignore state_referenced_locally
   let date = $state(app.date ?? app.today)
   let minutes = $state('')

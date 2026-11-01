@@ -30,4 +30,10 @@ export const api = {
   createEntry: (data) => request('POST', '/api/entries', data),
   changeEntry: (id, data) => request('PATCH', `/api/entries/${id}`, data),
   removeEntry: (id) => request('DELETE', `/api/entries/${id}`),
+  week: (date) => request('GET', '/api/week' + (date ? `?date=${date}` : '')),
+  month: (date) => request('GET', '/api/month' + (date ? `?date=${date}` : '')),
+  // Zeiten als Tag + Minuten seit Mitternacht, z.B. { day, start_minute: 555 }
+  schedule: (entryId, data) => request('POST', `/api/entries/${entryId}/schedule`, data),
+  changeBlock: (id, data) => request('PATCH', `/api/blocks/${id}`, data),
+  removeBlock: (id) => request('DELETE', `/api/blocks/${id}`),
 }
