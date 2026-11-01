@@ -1,18 +1,21 @@
 """Übertragung unerledigter Einträge auf heute bzw. diese Woche (R-9 bis R-11)."""
 from dataclasses import replace
 from datetime import date
-from typing import Iterable
+from typing import Collection, Iterable
 
 from .models import Entry, Scope, Status
 from .periods import week_start
 
 
-def carry_over(entries: Iterable[Entry], today: date) -> list[Entry]:
+def carry_over(entries: Iterable[Entry], today: date,
+               carry_series: Collection[int] = frozenset()) -> list[Entry]:
     """Gibt die Einträge zurück, die übertragen werden müssen, bereits geändert.
 
     - R-9: offene Tages-Einträge vergangener Tage -> heute
     - R-11: offene Wochen-Einträge vergangener Wochen -> diese Woche
     - R-10: Vermerk "überfällig"; overdue_since behält das ursprüngliche Datum
+    - R-13: Vorkommen einer Serie werden stattdessen "verpasst", ausser die
+      Serie steht in carry_series (Einstellung carry_over der Serie).
     Die Stufe bleibt in jedem Fall gleich.
     Nicht betroffene Einträge kommen nicht in der Liste vor.
     """
@@ -21,14 +24,14 @@ def carry_over(entries: Iterable[Entry], today: date) -> list[Entry]:
     for e in entries:
         if e.status != Status.OPEN:
             continue
-        if e.series_id is not None:
-            # Vorkommen von Serien behandelt R-13 (Meilenstein M3).
-            continue
         if e.scope == Scope.DAY and e.period_start < today:
             target = today
         elif e.scope == Scope.WEEK and e.period_start < this_week:
             target = this_week
         else:
+            continue
+        if e.series_id is not None and e.series_id not in carry_series:
+            changed.append(replace(e, status=Status.MISSED))  # R-13
             continue
         changed.append(replace(
             e,

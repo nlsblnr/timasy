@@ -37,4 +37,6 @@ class Entry:
     done_at: datetime | None = None
     overdue: bool = False
     overdue_since: date | None = None  # Datum des ursprünglichen Zeitraums
-    series_id: int | None = None       # erst ab M3 (Serien) benutzt
+    series_id: int | None = None       # nur bei Serien (M3)
+    occurrence_date: date | None = None  # ursprüngliches Datum des Vorkommens
+    is_exception: bool = False         # einzeln geändert, Serienänderungen lassen es in Ruhe (R-17)

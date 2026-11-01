@@ -95,9 +95,6 @@ def test_day_entry_earlier_this_week_moves_to_today_not_week():
     assert changed.period_start == TODAY
 
 
-def test_series_occurrences_are_left_alone_for_now():
-    # Serien-Vorkommen regelt R-13 (Meilenstein M3); bis dahin unverändert
-    assert carry_over([e(1, series_id=5)], TODAY) == []
 
 
 def test_carry_over_does_not_mutate_input():
