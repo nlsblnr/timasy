@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.9 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.10 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -110,12 +110,12 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 ## 6. Ansichten und Bedienung
 
-- **V-1 Heute (Startseite):** Oben Datum und Fortschritt (Pflicht-Balken prominent, Gesamt-Balken dezent) sowie der Hinweis „Minimum erreicht“. Darunter die Pflicht-Liste, dann die Bonus-Liste. Überfällige Einträge tragen den Vermerk aus R-10 in ruhiger Farbe. Daneben eine Tages-Zeitleiste mit Fremdterminen (grau) und Blöcken (Akzentfarbe). Nicht eingeplante Einträge lassen sich per Drag & Drop auf die Zeitleiste ziehen. Eine kleine Leiste „Diese Woche“ zeigt offene Wochen-Einträge, die sich einem Tag zuweisen lassen.
-- **V-2 Woche:** Raster Montag bis Sonntag mit Zeitachse. Fremdtermine sind nur lesbar; Blöcke lassen sich verschieben und in der Länge ändern (Raster 15 Minuten). Die Zeitachse zeigt 0 bis 24 Uhr und ist beim Öffnen auf 7 Uhr gescrollt; dasselbe gilt für die Tages-Zeitleiste in V-1. Eine Seitenleiste listet Wochen-Einträge (nach Stufe) und nicht eingeplante Tages-Einträge; sie lassen sich auf einen Tag (zuweisen) oder auf eine Uhrzeit (Block anlegen) ziehen. Oben der Wochenfortschritt.
+- **V-1 Heute (Startseite):** Oben Datum und Fortschritt (Pflicht-Balken prominent, Gesamt-Balken dezent) sowie der Hinweis „Minimum erreicht“. Darunter die Pflicht-Liste, dann die Bonus-Liste. Überfällige Einträge tragen den Vermerk aus R-10 in ruhiger Farbe. Daneben eine Tages-Zeitleiste mit Fremdterminen (grau) und Blöcken (Akzentfarbe). Nicht eingeplante Einträge lassen sich per Drag & Drop auf die Zeitleiste ziehen. Eine kleine Leiste „Diese Woche“ zeigt offene Wochen-Einträge, die sich einem Tag zuweisen lassen. \[Entscheid v0.10\] Die Zeitleiste ist gross (fast volle Fensterhöhe); „Diese Woche“ steht unter den Listen.
+- **V-2 Woche:** Raster Montag bis Sonntag mit Zeitachse. Fremdtermine sind nur lesbar; Blöcke lassen sich verschieben und in der Länge ändern (Raster 15 Minuten). Die Zeitachse zeigt 0 bis 24 Uhr. \[Entscheid v0.10\] Beim Öffnen ist sie auf die aktuelle Uhrzeit gescrollt (eine Stunde davor), wenn heute sichtbar ist, sonst auf 7 Uhr; eine dünne Linie markiert die aktuelle Uhrzeit. Raster und Zeitleiste nutzen die Breite und Höhe des Fensters möglichst aus. Dasselbe gilt für die Tages-Zeitleiste in V-1. Eine Seitenleiste listet Wochen-Einträge (nach Stufe) und nicht eingeplante Tages-Einträge; sie lassen sich auf einen Tag (zuweisen) oder auf eine Uhrzeit (Block anlegen) ziehen. Oben der Wochenfortschritt.
 - **V-3 Monat:** Monatsraster. Pro Tag eine dezente Zahl offener Pflicht-Einträge und kleine Striche für Termine. Klick öffnet den Tag. Vor- und Zurückblättern.
 - **V-4 Backlog:** Liste aller Aufgaben ohne offenen Eintrag, mit Suche und Tag-Filter. Von hier aus Zuweisen zu Tag oder Woche inklusive Stufe.
 - **V-5 Serien:** Liste aller Serien; bearbeiten, beenden, `carry_over` umschalten.
-- **V-6 Einstellungen:** Google-Verbindung und Sync-Status, Kalenderauswahl, Sync-Intervall, Theme (System, Hell, Dunkel), Backup (Kopie der Datenbankdatei erstellen). \[Entscheid v0.9\] Die Zeitzone ist fest `Europe/Zurich` und nicht einstellbar. Zusätzlich zum Knopf erstellt Timasy beim ersten Start eines Tages automatisch ein Backup; die letzten 14 automatischen bleiben erhalten (Ordner `data/backups/`).
+- **V-6 Einstellungen:** Google-Verbindung und Sync-Status, Kalenderauswahl, Sync-Intervall, Theme (System, Hell, Dunkel), Akzentfarbe, Backup (Kopie der Datenbankdatei erstellen). \[Entscheid v0.9\] Die Zeitzone ist fest `Europe/Zurich` und nicht einstellbar. Zusätzlich zum Knopf erstellt Timasy beim ersten Start eines Tages automatisch ein Backup; die letzten 14 automatischen bleiben erhalten (Ordner `data/backups/`).
 - **V-7 Schnellerfassung:** Ein Tastenkürzel öffnet in jeder Ansicht eine Eingabezeile. Titel eingeben, Enter. In Heute, Woche und Monat entsteht ein Eintrag für den angezeigten Tag, im Backlog eine Aufgabe ohne Zeitraum. **\[Entscheid\]** Standardstufe ist Pflicht, per Tastenkürzel umschaltbar. `#name` im Titel fügt einen Tag hinzu. Details (Stufe, Zeitraum, Dauer, Notiz, Tags, Uhrzeit, Wiederholung) im erweiterten Dialog.
 - **V-8 Wiederholung erfassen:** Wie in Kalender-Apps: „Wiederholt sich“ → Rhythmus, Intervall, Wochentage, Ende (nie / am Datum / nach n Mal), mit Vorschau der nächsten Vorkommen.
 
@@ -140,7 +140,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 ## 8. Design
 
 - **UX-1:** Vorbild sind die neuesten Android-Versionen (Material 3) und iOS: einfach, klar, effizient.
-- **UX-2:** Ruhige Optik: viel Weissraum, grosse klare Typografie mit Systemschrift, weiche Rundungen, ein einziger Akzentfarbton; Statusfarben nur dezent. Hell- und Dunkelmodus folgen der Systemeinstellung.
+- **UX-2:** Ruhige Optik: viel Weissraum, grosse klare Typografie mit Systemschrift, weiche Rundungen, ein einziger Akzentfarbton; Statusfarben nur dezent. Hell- und Dunkelmodus folgen der Systemeinstellung (oder fest gewählt, V-6). \[Entscheid v0.10\] Der Akzentfarbton ist in den Einstellungen wählbar: Blau (Standard), Grün, Violett, Orange, Rosé.
 - **UX-3:** Keine Ablenkung: keine Pop-ups, Zähler-Badges, Töne oder Effekte. Animationen nur kurz und funktional.
 - **UX-4:** Häufige Aktionen (erfassen, abhaken, auf einen anderen Tag verschieben, Ansicht wechseln) gehen per Tastatur und in höchstens zwei Schritten. \[Entscheid v0.9\] In der Heute-Ansicht: ↑/↓ Eintrag wählen, Leertaste abhaken, Shift+→/Shift+← gewählten Eintrag einen Tag später/früher, t Stufe wechseln, Enter bearbeiten, ←/→ vorheriger/nächster Tag. Mit der Maus: Menüpunkt „Verschieben auf …“ (morgen oder Datum). Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
 - **UX-5:** „Überfällig“ ist ein sachlicher Hinweis, kein Alarm: keine grelle Warnfarbe.
@@ -215,3 +215,4 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **07.11.2026, v0.8:** Vor Beginn von M5 bestätigt: A-2 (Block in Google gelöscht → Eintrag bleibt mit Tag und Stufe, ohne Uhrzeit), A-6/S-6, A-8/S-11, S-7 (zuletzt gemachte Änderung gewinnt), R-30. Neu: S-13 nicht abbildbare Änderungen werden zurückgesetzt, S-14 von Hand angelegte Termine im Timasy-Kalender werden ignoriert, S-15 bestehende Blöcke werden einmal übertragen.
 - **07.11.2026:** M5 abgenommen.
 - **07.11.2026, v0.9:** Vor Beginn von M6: Zeitzone fest Europe/Zurich (aus V-6 entfernt); tägliches automatisches Backup (14 behalten) zusätzlich zum Knopf; Tastenkürzel für UX-4 festgelegt, mit Übersicht unter `?`.
+- **08.11.2026, v0.10:** Rückmeldungen aus der Nutzung: Akzentfarbe wählbar (UX-2, V-6); Wochenraster und Tages-Zeitleiste breiter und höher, beim Öffnen auf die aktuelle Uhrzeit gescrollt mit Linie für „jetzt“ (V-1, V-2); „Diese Woche“ unter den Listen.
