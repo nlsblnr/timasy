@@ -23,8 +23,9 @@ class Block:
     start: datetime                       # mit Zeitzone
     end: datetime
     google_event_id: str | None = None    # ab M5 (Google)
-    local_updated_at: datetime | None = None
-    last_synced_at: datetime | None = None
+    local_updated_at: datetime | None = None   # letzte Änderung in Timasy
+    last_synced_at: datetime | None = None     # letzter Abgleich mit Google
+    synced_signature: str | None = None        # Stand des Ereignisses in Google (M5)
 
 
 def default_duration(estimated_minutes: int | None) -> int:
