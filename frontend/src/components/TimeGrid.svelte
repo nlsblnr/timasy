@@ -142,8 +142,10 @@
     try {
       await fn()
       reload()
+      return true
     } catch (e) {
       showError(e)
+      return false
     }
   }
 
@@ -224,7 +226,10 @@
                 <div class="block-top">
                   <input type="checkbox" checked={done} aria-label="{item.entry.title} abhaken"
                          onpointerdown={(e) => e.stopPropagation()}
-                         onchange={() => call(() => api.changeEntry(item.entry.id, { done: !done }))} />
+                         onchange={async (e) => {
+                           const box = e.target
+                           if (!(await call(() => api.changeEntry(item.entry.id, { done: !done })))) box.checked = done
+                         }} />
                   <span class="block-title">{item.entry.title}</span>
                   {#if item.entry.conflict}<span class="conflict-mark" title="Überschneidet sich mit einem Termin (R-20)">⚠︎</span>{/if}
                   <button class="remove" title="Block entfernen (Eintrag bleibt)"

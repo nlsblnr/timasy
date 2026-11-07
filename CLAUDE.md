@@ -49,6 +49,8 @@ cd frontend && npm install && npm run build && cd ..
 - Daten liegen in `data/timasy.db` (nicht im Repository).
 - Google: Einrichtung siehe `docs/google-einrichtung.md`; Zugangsdaten in `data/google/credentials.json`, Token in `data/google/token.json` (beides nie ins Repository).
 - Nach `git pull` mit neuen Abhängigkeiten: `pip install -r requirements.txt` erneut ausführen.
+- Backups: `data/backups/` (Knopf in den Einstellungen und täglich automatisch, 14 behalten). Wiederherstellen: Timasy beenden, Backup nach `data/timasy.db` kopieren, starten.
+- Tastenkürzel: in der App mit `?` (Liste in `frontend/src/lib/keys.js`).
 
 Unter Windows (PowerShell; Befehle einzeln ausführen, ältere PowerShell kennt kein `&&`):
 ```powershell

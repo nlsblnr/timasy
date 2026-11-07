@@ -42,12 +42,18 @@
     try {
       await fn()
       reload()
+      return true
     } catch (e) {
       showError(e)
+      return false
     }
   }
 
-  const toggleDone = () => call(() => api.changeEntry(entry.id, { done: !done }))
+  // Klappt das Speichern nicht, springt die Checkbox zurück
+  const toggleDone = async (event) => {
+    const box = event.target
+    if (!(await call(() => api.changeEntry(entry.id, { done: !done })))) box.checked = done
+  }
   const toggleTier = () =>
     call(() => api.changeEntry(entry.id, { tier: entry.tier === 'must' ? 'bonus' : 'must' }))
   const assign = () => call(() => api.changeEntry(entry.id, { day: assignTo }))

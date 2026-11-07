@@ -1,17 +1,31 @@
 // Alle Aufrufe an das Python-Backend an einer Stelle.
 
+// Wird aufgerufen, wenn der Server (nicht) erreichbar ist (siehe state.svelte.js)
+let onConnection = () => {}
+export const setConnectionListener = (fn) => (onConnection = fn)
+
+export class ServerDownError extends Error {}
+
 async function request(method, url, body, options = {}) {
-  const res = await fetch(url, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-    ...options,
-  })
+  let res
+  try {
+    res = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+      ...options,
+    })
+  } catch {
+    onConnection(false)
+    throw new ServerDownError('Keine Verbindung zum Timasy-Server.')
+  }
+  onConnection(true)
   if (!res.ok) {
     let message = `Fehler ${res.status}`
     try {
       const data = await res.json()
       if (typeof data.detail === 'string') message = data.detail
+      else if (res.status === 422) message = 'Ungültige Eingabe. Bitte die Felder prüfen.'
     } catch {}
     throw new Error(message)
   }

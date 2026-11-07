@@ -98,6 +98,14 @@
     {:else}<Backlog />{/if}
   </main>
 
+  {#if app.serverDown}
+    <!-- Fehlerzustand: Backend nicht erreichbar (Abschnitt 10: App bleibt ruhig) -->
+    <div class="banner" role="alert">
+      Keine Verbindung zum Timasy-Server. Läuft <code>run.py</code> noch? Sobald er wieder läuft,
+      geht es hier automatisch weiter.
+    </div>
+  {/if}
+
   {#if app.helpOpen}<ShortcutHelp onclose={() => (app.helpOpen = false)} />{/if}
 
   {#if app.pendingDelete}
@@ -113,12 +121,20 @@
 
 <style>
   .shell { max-width: 1280px; margin: 0 auto; padding: 16px 32px 96px; }
-  nav { display: flex; align-items: center; gap: 4px; margin-bottom: 24px; }
+  @media (max-width: 640px) { .shell { padding: 12px 16px 96px; } }
+  nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 24px; }
   .brand { font-weight: 700; margin-right: 16px; }
   .spacer { flex: 1; }
   .syncdot { padding: 6px 10px; display: flex; }
   .help { font-size: 1.1rem; color: var(--muted); }
   .quick { margin-bottom: 24px; }
+  .banner {
+    position: fixed; left: 12px; right: 12px; top: 12px; margin: 0 auto; z-index: 30;
+    width: fit-content; max-width: 560px; padding: 12px 18px; border-radius: 14px;
+    background: var(--surface-raised); box-shadow: 0 4px 16px var(--shadow);
+    border-left: 4px solid var(--calm); font-size: 0.92rem;
+  }
+  .banner code { font-size: 0.85em; }
   .snackbar {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     display: flex; align-items: center; gap: 16px; padding: 10px 12px 10px 20px;

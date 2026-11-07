@@ -3,7 +3,7 @@
 // Neues Konzept: $state macht ein Objekt "reaktiv". Ändert sich ein Wert,
 // aktualisiert Svelte automatisch alle Stellen, die ihn anzeigen.
 
-import { api } from './api.js'
+import { ServerDownError, api, setConnectionListener } from './api.js'
 
 export const app = $state({
   view: 'today',          // 'today', 'week', 'month', 'backlog', 'series' oder 'settings'
@@ -14,8 +14,16 @@ export const app = $state({
   error: '',
   pendingDelete: null,    // { taskId, title } während der Rückgängig-Frist
   sync: null,             // Zustand des Google-Abgleichs (S-10)
+  serverDown: false,      // Backend nicht erreichbar (Fehlerzustand)
   helpOpen: false,        // Übersicht der Tastenkürzel offen?
   selectedId: null,       // per Tastatur gewählter Eintrag in Heute (UX-4)
+})
+
+// Server wieder erreichbar: alles neu laden
+setConnectionListener((ok) => {
+  const wasDown = app.serverDown
+  app.serverDown = !ok
+  if (ok && wasDown) reload()
 })
 
 export function reload() {
@@ -24,6 +32,7 @@ export function reload() {
 }
 
 export function showError(e) {
+  if (e instanceof ServerDownError) return   // zeigt schon das Banner oben
   app.error = e?.message || String(e)
   setTimeout(() => (app.error = ''), 5000)
 }
