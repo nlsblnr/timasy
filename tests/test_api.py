@@ -215,3 +215,25 @@ def test_local_change_triggers_sync(tmp_path, monkeypatch):
         assert triggered == []                      # Lesen löst nichts aus
         c.post("/api/quick", json={"text": "X", "date": "2026-11-04"})
         assert triggered == [1]
+
+
+# --- M6: Einstellungen und Backup (V-6) --------------------------------------
+
+def test_settings_defaults_and_change(client):
+    s = client.get("/api/settings").json()
+    assert s == {"theme": "system", "sync_interval_minutes": 5}
+    r = client.patch("/api/settings", json={"theme": "dark", "sync_interval_minutes": 15})
+    assert r.json() == {"theme": "dark", "sync_interval_minutes": 15}
+    assert client.get("/api/settings").json()["theme"] == "dark"
+    assert client.get("/api/sync/status").json()["interval_minutes"] == 15
+    assert client.patch("/api/settings", json={"theme": "pink"}).status_code == 422
+    assert client.patch("/api/settings", json={"sync_interval_minutes": 0}).status_code == 422
+
+
+def test_backup_button_and_daily_backup(client):
+    # Beim Start entsteht das tägliche Backup
+    names = [b["name"] for b in client.get("/api/backups").json()]
+    assert any(n.startswith("timasy-auto-") for n in names)
+    r = client.post("/api/backups")
+    assert r.status_code == 200 and r.json()["name"].startswith("timasy-2026-11-04-")
+    assert len(client.get("/api/backups").json()) == 2

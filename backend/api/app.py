@@ -16,7 +16,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .. import clock, services
+from .. import backup, clock, services
 from ..config import FRONTEND_DIST
 from ..db import repository as repo
 from ..db.connection import connect, init_db
@@ -113,6 +113,12 @@ class SeriesPatch(BaseModel):
     carry_over: bool
 
 
+class SettingsPatch(BaseModel):
+    """Einstellungen (V-6); nur mitgeschickte Felder werden geändert."""
+    theme: Literal["system", "light", "dark"] | None = None
+    sync_interval_minutes: int | None = Field(default=None, ge=1, le=60)
+
+
 class CalendarPatch(BaseModel):
     selected: bool
 
@@ -129,10 +135,30 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
                start_sync: bool = False) -> FastAPI:
     """start_sync=True startet den Abgleich mit Google im Hintergrund (S-9)."""
     sync = sync_service or SyncService(db_path)
+    backup_dir = Path(db_path).parent / "backups"
+
+    def daily_backup():
+        """Einmal pro Tag automatisch (v0.9); Fehler dürfen die App nie stören."""
+        try:
+            backup.daily_backup(db_path, backup_dir, clock.now())
+        except OSError:
+            pass
+
+    def load_settings() -> dict:
+        conn = connect(db_path)
+        try:
+            return {
+                "theme": repo.get_setting(conn, "theme") or "system",
+                "sync_interval_minutes": int(repo.get_setting(conn, "sync_interval_minutes") or 5),
+            }
+        finally:
+            conn.close()
 
     @asynccontextmanager
     async def lifespan(app):
         init_db(db_path)  # Migrationen beim Start
+        daily_backup()
+        sync.set_interval(load_settings()["sync_interval_minutes"], wake=False)
         if start_sync:
             sync.start()
         yield
@@ -148,7 +174,8 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
         response = await call_next(request)
         path = request.url.path
         if (request.method in ("POST", "PUT", "PATCH", "DELETE") and path.startswith("/api/")
-                and not path.startswith(("/api/sync", "/api/google", "/api/series/preview"))
+                and not path.startswith(("/api/sync", "/api/google", "/api/series/preview",
+                                     "/api/settings", "/api/backups"))
                 and response.status_code < 400):
             sync.trigger()
         return response
@@ -176,6 +203,7 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
     @app.get("/api/day")
     def get_day(date: dt.date | None = None, conn: sqlite3.Connection = Depends(get_conn)):
         today = clock.today()
+        daily_backup()   # falls Timasy über Mitternacht läuft
         services.refresh(conn, today, clock.now())
         return services.day_view(conn, date or today, today)
 
@@ -340,6 +368,32 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
                           conn: sqlite3.Connection = Depends(get_conn)):
         run(lambda: services.delete_occurrence(conn, entry_id, mode, clock.today()))
         return {"ok": True}
+
+    # --- Einstellungen und Backup (V-6, M6) -------------------------------------
+
+    @app.get("/api/settings")
+    def get_settings():
+        return load_settings()
+
+    @app.patch("/api/settings")
+    def patch_settings(body: SettingsPatch, conn: sqlite3.Connection = Depends(get_conn)):
+        if body.theme is not None:
+            repo.set_setting(conn, "theme", body.theme)
+        if body.sync_interval_minutes is not None:
+            repo.set_setting(conn, "sync_interval_minutes", str(body.sync_interval_minutes))
+            sync.set_interval(body.sync_interval_minutes)
+        conn.commit()
+        return load_settings()
+
+    @app.get("/api/backups")
+    def get_backups():
+        return backup.list_backups(backup_dir)
+
+    @app.post("/api/backups")
+    def post_backup():
+        """ "Backup erstellen": vollständige Kopie der Datenbankdatei."""
+        path = backup.create_backup(db_path, backup_dir, clock.now())
+        return {"name": path.name, "folder": str(backup_dir)}
 
     # --- Google und Abgleich (M4, V-6) -------------------------------------------
 

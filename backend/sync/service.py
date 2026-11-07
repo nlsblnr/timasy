@@ -43,6 +43,12 @@ class SyncService:
         self._thread: threading.Thread | None = None
         self._stop = False
 
+    def set_interval(self, minutes: int, wake: bool = True) -> None:
+        """Sync-Intervall ändern (V-6); mit wake=True gleich neu einplanen."""
+        self.interval_seconds = minutes * 60
+        if wake:
+            self._wakeup.set()
+
     # --- Zustand ---------------------------------------------------------------
 
     def status(self) -> dict:
