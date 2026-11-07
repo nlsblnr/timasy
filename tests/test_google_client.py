@@ -3,7 +3,7 @@ import pytest
 from googleapiclient.errors import HttpError
 from httplib2 import Response
 
-from backend.sync.errors import AuthExpired, SyncTokenInvalid
+from backend.sync.errors import AuthExpired, GoogleGone, GoogleNotFound
 from backend.sync.google_client import SCOPES, _call
 
 
@@ -15,8 +15,10 @@ class FakeRequest:
         raise HttpError(Response({"status": self.status}), b"{}")
 
 
-def test_410_means_sync_token_invalid():
-    with pytest.raises(SyncTokenInvalid):
+def test_404_and_410():
+    with pytest.raises(GoogleNotFound):
+        _call(FakeRequest(404))
+    with pytest.raises(GoogleGone):
         _call(FakeRequest(410))
 
 

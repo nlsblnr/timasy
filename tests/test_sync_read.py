@@ -51,7 +51,7 @@ class FakeGoogle:
             items = list(self.changes[calendar_id])
         else:
             items = [e for e in self.events[calendar_id].values()
-                     if time_min <= e["start"]["dateTime"] < time_max]
+                     if time_min is None or time_min <= e["start"]["dateTime"] < time_max]
         start = int(page_token or 0)
         page = items[start:start + self.page_size]
         result = {"items": page}

@@ -19,7 +19,21 @@ class FakeWithCreate(FakeGoogle):
     def create_calendar(self, summary, time_zone):
         self.created.append(summary)
         self.calendars.append({"id": "neu-timasy", "summary": summary})
+        self.events["neu-timasy"] = {}
+        self.changes["neu-timasy"] = []
         return "neu-timasy"
+
+    # Schreiben (M5) – hier nicht weiter geprüft, siehe test_sync_write.py
+    def insert_event(self, calendar_id, body):
+        gid = f"ev{len(self.events[calendar_id]) + 1}"
+        self.events[calendar_id][gid] = dict(body, id=gid)
+        return gid
+
+    def update_event(self, calendar_id, gid, body):
+        self.events[calendar_id][gid] = dict(body, id=gid)
+
+    def delete_event(self, calendar_id, gid):
+        self.events[calendar_id].pop(gid, None)
 
 
 @pytest.fixture

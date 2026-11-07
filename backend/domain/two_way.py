@@ -89,7 +89,8 @@ def parse_incoming(item: dict) -> Incoming:
 class Decision:
     """kind:
     - ignore: kein Timasy-Ereignis (S-14)
-    - none: Zeit unverändert (Titel o.ä. überschreibt der nächste Upload, S-6)
+    - none: Zeit unverändert oder nur das Echo unseres eigenen Uploads
+      (Titel o.ä. überschreibt der nächste Upload, S-6)
     - apply_time: neue Zeit aus Google übernehmen (S-7), evtl. anderer Tag (R-23)
     - push: Timasy-Zeit gilt; Google wird überschrieben (S-7, S-13)
     - delete_block: in Google gelöscht -> Block löschen, Eintrag bleibt (S-8, A-2)
@@ -115,6 +116,8 @@ def decide_incoming(inc: Incoming, block: Block | None, entry: Entry | None,
                     today: date) -> Decision:
     if block is None:
         return Decision("ignore" if inc.block_id is None else "delete_event")
+    if not inc.cancelled and block.synced_signature == inc.signature:
+        return Decision("none")   # in Google unverändert seit unserem letzten Abgleich
 
     local_change = _local_change_time(block)
     timasy_is_newer = (local_change is not None and inc.updated is not None

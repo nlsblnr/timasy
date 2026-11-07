@@ -15,3 +15,11 @@ class AuthExpired(Exception):
 
 class SyncTokenInvalid(Exception):
     """Google meldet: Sync-Token ungültig (HTTP 410) -> neu abgleichen (S-4)."""
+
+
+class GoogleNotFound(Exception):
+    """Google meldet 404: Kalender oder Ereignis gibt es nicht (mehr)."""
+
+
+class GoogleGone(Exception):
+    """Google meldet 410: Ereignis wurde bereits gelöscht."""

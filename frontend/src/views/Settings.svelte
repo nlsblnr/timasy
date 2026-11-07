@@ -89,7 +89,7 @@
     <h2>Termine anzeigen aus</h2>
     <p class="sub">Termine aus diesen Kalendern erscheinen grau in Heute, Woche und Monat (nur lesen,
       heute bis 90 Tage voraus). Der Kalender „Timasy“ ist nicht aufgeführt: Dort legt Timasy
-      ab M5 die eingeplanten Blöcke ab.</p>
+      deine eingeplanten Blöcke ab, damit du sie auch am Handy siehst.</p>
     <ul>
       {#each calendars as cal (cal.id)}
         <li>

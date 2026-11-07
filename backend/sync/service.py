@@ -7,15 +7,19 @@ Minute, dann 2, 4 … bis höchstens zum normalen Intervall (S-10).
 Die App bleibt dabei voll nutzbar; der Zustand ist über status() abrufbar.
 """
 import threading
+import time
 from pathlib import Path
 from typing import Callable
 
 from .. import clock
 from ..db.connection import connect
 from .errors import AuthExpired, NotConfigured, NotConnected
+from ..db import repository as repo
 from .read import CalendarClient, ensure_timasy_calendar, sync_calendar_list, sync_external
+from .write import CalendarGone, sync_blocks
 
 FIRST_RETRY_SECONDS = 60
+BUNDLE_SECONDS = 2   # mehrere schnelle Änderungen in einem Abgleich zusammenfassen
 
 
 def default_client_factory() -> CalendarClient:
@@ -67,8 +71,19 @@ class SyncService:
                 client = self.client_factory()
                 conn = connect(self.db_path)
                 try:
-                    ensure_timasy_calendar(conn, client)
+                    timasy_id = ensure_timasy_calendar(conn, client)
                     sync_calendar_list(conn, client)
+                    try:
+                        # M5: Blöcke in beide Richtungen
+                        sync_blocks(conn, client, timasy_id, clock.today(), clock.now())
+                    except CalendarGone:
+                        # In Google gelöscht: beim nächsten Abgleich neu anlegen
+                        # und alle Blöcke neu hochladen (S-3, S-15)
+                        repo.forget_google_events(conn)
+                        repo.forget_calendar(conn, timasy_id)
+                        repo.set_setting(conn, "timasy_calendar_id", None)
+                        conn.commit()
+                        self._wakeup.set()
                     sync_external(conn, client, clock.today(), clock.now())
                     conn.commit()
                 finally:
@@ -114,7 +129,8 @@ class SyncService:
     def _loop(self) -> None:
         while not self._stop:
             self.run_once()
-            self._wakeup.wait(self.next_wait_seconds())
+            if self._wakeup.wait(self.next_wait_seconds()):
+                time.sleep(BUNDLE_SECONDS)   # ausgelöst: kurz warten, ob noch mehr kommt
             self._wakeup.clear()
 
     def connect_google(self) -> None:

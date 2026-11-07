@@ -118,6 +118,25 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX external_event_start ON external_event (start);
     """,
+    # 5: Google schreiben (M5)
+    """
+    -- Stand des Ereignisses in Google beim letzten Abgleich (siehe domain/two_way.py)
+    ALTER TABLE block ADD COLUMN synced_signature TEXT;
+
+    -- Warteschlange: in Timasy gelöschte Blöcke, deren Ereignis in Google noch
+    -- gelöscht werden muss (S-8, S-10)
+    CREATE TABLE google_deletion (
+        google_event_id TEXT PRIMARY KEY
+    );
+
+    -- Trigger: Wird ein Block gelöscht (egal wo im Code, auch über ON DELETE
+    -- CASCADE), kommt sein Google-Ereignis automatisch in die Warteschlange.
+    CREATE TRIGGER block_deleted AFTER DELETE ON block
+    WHEN OLD.google_event_id IS NOT NULL
+    BEGIN
+        INSERT OR IGNORE INTO google_deletion (google_event_id) VALUES (OLD.google_event_id);
+    END;
+    """,
 ]
 
 

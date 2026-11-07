@@ -142,6 +142,17 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
     app.state.db_path = db_path
     app.state.sync = sync
 
+    @app.middleware("http")
+    async def sync_after_change(request: Request, call_next):
+        """S-9: Nach jeder Änderung (nicht nach blossem Lesen) sofort abgleichen."""
+        response = await call_next(request)
+        path = request.url.path
+        if (request.method in ("POST", "PUT", "PATCH", "DELETE") and path.startswith("/api/")
+                and not path.startswith(("/api/sync", "/api/google", "/api/series/preview"))
+                and response.status_code < 400):
+            sync.trigger()
+        return response
+
     def get_conn():
         """Eine Verbindung pro Anfrage; am Ende wird gespeichert (commit)."""
         conn = connect(db_path)

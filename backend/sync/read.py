@@ -32,6 +32,15 @@ class CalendarClient(Protocol):
     def create_calendar(self, summary: str, time_zone: str) -> str:
         """Neuen (sekundären) Kalender anlegen; gibt seine ID zurück."""
 
+    def insert_event(self, calendar_id: str, body: dict) -> str:
+        """Ereignis anlegen; gibt seine ID zurück (M5)."""
+
+    def update_event(self, calendar_id: str, event_id: str, body: dict) -> None:
+        """Ereignis ersetzen (M5)."""
+
+    def delete_event(self, calendar_id: str, event_id: str) -> None:
+        """Ereignis löschen (M5)."""
+
 
 def ensure_timasy_calendar(conn, client: CalendarClient) -> str:
     """S-3: Beim ersten Abgleich den Kalender "Timasy" anlegen und die ID merken."""
@@ -39,6 +48,7 @@ def ensure_timasy_calendar(conn, client: CalendarClient) -> str:
     if not calendar_id:
         calendar_id = client.create_calendar(TIMASY_CALENDAR_NAME, TIMEZONE.key)
         repo.set_setting(conn, "timasy_calendar_id", calendar_id)
+        conn.commit()   # sofort speichern: sonst entstünde bei einem Fehler ein zweiter Kalender
     return calendar_id
 
 

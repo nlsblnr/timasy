@@ -208,6 +208,7 @@ def _to_block(row) -> Block:
         google_event_id=row["google_event_id"],
         local_updated_at=dt(row["local_updated_at"]),
         last_synced_at=dt(row["last_synced_at"]),
+        synced_signature=row["synced_signature"],
     )
 
 
@@ -221,6 +222,7 @@ def _block_values(b: Block) -> dict:
         "google_event_id": b.google_event_id,
         "local_updated_at": iso(b.local_updated_at),
         "last_synced_at": iso(b.last_synced_at),
+        "synced_signature": b.synced_signature,
     }
 
 
@@ -228,15 +230,16 @@ def insert_block(conn, b: Block) -> int:
     v = _block_values(b)
     return conn.execute(
         'INSERT INTO block (entry_id, start, "end", google_event_id, local_updated_at, '
-        "last_synced_at) VALUES (:entry_id, :start, :end, :google_event_id, "
-        ":local_updated_at, :last_synced_at)", v).lastrowid
+        "last_synced_at, synced_signature) VALUES (:entry_id, :start, :end, :google_event_id, "
+        ":local_updated_at, :last_synced_at, :synced_signature)", v).lastrowid
 
 
 def update_block(conn, b: Block) -> None:
     conn.execute(
         'UPDATE block SET entry_id = :entry_id, start = :start, "end" = :end, '
         "google_event_id = :google_event_id, local_updated_at = :local_updated_at, "
-        "last_synced_at = :last_synced_at WHERE id = :id", {**_block_values(b), "id": b.id})
+        "last_synced_at = :last_synced_at, synced_signature = :synced_signature "
+        "WHERE id = :id", {**_block_values(b), "id": b.id})
 
 
 def get_block(conn, block_id: int) -> Block | None:
@@ -453,3 +456,38 @@ def external_events_between(conn, first: date, last: date) -> list[ExternalEvent
         'SELECT e.* FROM external_event e JOIN google_calendar c ON c.id = e.calendar_id '
         'WHERE c.selected = 1 AND e."end" > ? AND e.start < ? ORDER BY e.start', (lo, hi))
     return [_to_external(r) for r in rows]
+
+
+# --- Google schreiben (M5) -------------------------------------------------------
+
+def all_blocks(conn) -> list[Block]:
+    return [_to_block(r) for r in conn.execute("SELECT * FROM block ORDER BY id")]
+
+
+def block_by_event(conn, google_event_id: str) -> Block | None:
+    row = conn.execute("SELECT * FROM block WHERE google_event_id = ?", (google_event_id,)).fetchone()
+    return _to_block(row) if row else None
+
+
+def pending_deletions(conn) -> list[str]:
+    return [r[0] for r in conn.execute("SELECT google_event_id FROM google_deletion")]
+
+
+def clear_deletion(conn, google_event_id: str) -> None:
+    conn.execute("DELETE FROM google_deletion WHERE google_event_id = ?", (google_event_id,))
+
+
+def forget_google_events(conn) -> None:
+    """Der Timasy-Kalender ist weg: alle Verknüpfungen lösen (neu hochladen)."""
+    conn.execute("UPDATE block SET google_event_id = NULL, last_synced_at = NULL, "
+                 "synced_signature = NULL")
+    conn.execute("DELETE FROM google_deletion")
+
+
+def blocks_with_titles(conn) -> list[tuple[Block, Tier, str]]:
+    """Alle Blöcke mit Stufe und Titel (für die Ereignisse in Google)."""
+    rows = conn.execute(
+        "SELECT block.*, entry.tier AS entry_tier, task.title AS task_title FROM block "
+        "JOIN entry ON entry.id = block.entry_id JOIN task ON task.id = entry.task_id "
+        "ORDER BY block.id").fetchall()
+    return [(_to_block(r), Tier(r["entry_tier"]), r["task_title"]) for r in rows]

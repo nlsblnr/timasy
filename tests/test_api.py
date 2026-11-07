@@ -200,3 +200,18 @@ def test_sync_status_and_calendar_selection(tmp_path, monkeypatch):
         assert r.status_code == 200 and r.json()["selected"] is True
         assert c.patch("/api/google/calendars/gibtsnicht", json={"selected": True}).status_code == 404
         assert c.post("/api/sync").status_code == 200
+
+
+def test_local_change_triggers_sync(tmp_path, monkeypatch):
+    # S-9: sofort nach lokalen Änderungen abgleichen
+    from backend.sync.service import SyncService
+    monkeypatch.setenv("TIMASY_TODAY", "2026-11-04")
+    db = tmp_path / "s.db"
+    service = SyncService(db, client_factory=lambda: None)
+    triggered = []
+    service.trigger = lambda: triggered.append(1)
+    with TestClient(create_app(db, sync_service=service)) as c:
+        c.get("/api/day")
+        assert triggered == []                      # Lesen löst nichts aus
+        c.post("/api/quick", json={"text": "X", "date": "2026-11-04"})
+        assert triggered == [1]

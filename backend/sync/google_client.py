@@ -16,7 +16,9 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from ..config import DB_PATH
-from .errors import AuthExpired, NotConfigured, NotConnected, SyncTokenInvalid
+from .errors import (
+    AuthExpired, GoogleGone, GoogleNotFound, NotConfigured, NotConnected, SyncTokenInvalid,
+)
 
 # S-2 (geprüft v0.6): so gering wie möglich
 SCOPES = [
@@ -115,7 +117,22 @@ class GoogleClient:
         else:
             params["timeMin"] = time_min
             params["timeMax"] = time_max
-        return _call(self.service.events().list(**params))
+        try:
+            return _call(self.service.events().list(**params))
+        except GoogleGone as e:
+            # 410 auf eine Abfrage mit Sync-Token: Token ungültig -> neu abgleichen
+            raise SyncTokenInvalid() from e
+
+    # --- Schreiben, nur im Timasy-Kalender (M5, S-2) --------------------------
+
+    def insert_event(self, calendar_id: str, body: dict) -> str:
+        return _call(self.service.events().insert(calendarId=calendar_id, body=body))["id"]
+
+    def update_event(self, calendar_id: str, event_id: str, body: dict) -> None:
+        _call(self.service.events().update(calendarId=calendar_id, eventId=event_id, body=body))
+
+    def delete_event(self, calendar_id: str, event_id: str) -> None:
+        _call(self.service.events().delete(calendarId=calendar_id, eventId=event_id))
 
     def create_calendar(self, summary: str, time_zone: str) -> str:
         body = {"summary": summary, "timeZone": time_zone}
@@ -127,8 +144,10 @@ def _call(request):
     try:
         return request.execute()
     except HttpError as e:
+        if e.resp.status == 404:
+            raise GoogleNotFound() from e
         if e.resp.status == 410:
-            raise SyncTokenInvalid() from e
+            raise GoogleGone() from e
         if e.resp.status == 401:
             raise AuthExpired() from e
         raise

@@ -171,3 +171,12 @@ def test_ending_at_midnight_is_fine():
 def test_title_changed_in_google_only_needs_push():
     # S-6: Titel geht nur von Timasy nach Google -> überschreiben
     assert decide(google_item(summary="Anders")).kind == "none"   # Zeit gleich; Titel per Signatur
+
+
+def test_echo_of_own_upload_is_ignored():
+    # Google meldet unseren eigenen Upload zurück; Timasy wurde inzwischen geändert
+    item = google_item()
+    sig = parse_incoming(item).signature
+    moved = block(start=at(D, 14), end=at(D, 15), synced_signature=sig,
+                  local_updated_at=at(TODAY, 8), last_synced_at=at(TODAY, 9))
+    assert decide(item, b=moved).kind == "none"
