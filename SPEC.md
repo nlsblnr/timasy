@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.7 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.8 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -100,7 +100,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 
 - **R-19 \[Entscheid\]** Ein Block liegt innerhalb eines Tages (keine Ganztags- oder Mitternachts-Blöcke) und gehört zu genau einem Tages-Eintrag. Ein Wochen-Eintrag muss erst einem Tag zugewiesen werden (R-6).
 - **R-20** Überschneidet sich ein Block mit einem Fremdtermin, ist das erlaubt, wird aber sichtbar markiert.
-- **R-30 \[Annahme\]** Ganztägige Fremdtermine (z.B. Geburtstage, Ferien) gelten nicht als Überschneidung im Sinn von R-20.
+- **R-30 \[Entscheid\]** Ganztägige Fremdtermine (z.B. Geburtstage, Ferien) gelten nicht als Überschneidung im Sinn von R-20.
 - **R-21 \[Entscheid\]** Neue Blöcke übernehmen als Dauer `estimated_minutes`, sonst 30 Minuten.
 - **R-23 \[Entscheid\]** Wird ein Block auf einen anderen Tag verschoben, wandert sein Eintrag mit auf diesen Tag (R-19: Ein Block liegt immer am Tag seines Eintrags). Eigene Blöcke dürfen sich überschneiden; sie werden nebeneinander dargestellt.
 
@@ -126,13 +126,16 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **S-3 \[Entscheid\] Eigener Kalender:** Beim ersten Sync legt Timasy einen Kalender „Timasy“ an und merkt sich dessen ID. Alle Blöcke leben nur dort.
 - **S-4 Fremdtermine lesen:** \[Entscheid v0.5\] nur aus den Kalendern, die in den Einstellungen ausdrücklich gewählt sind (Standard: keiner; der Timasy-Kalender ist nie wählbar). Gespeichert werden Titel und Zeiten. Zeitfenster: ab heute bis 90 Tage voraus, keine vergangenen Tage. Abgleich inkrementell über Sync-Token; ist der Token ungültig, wird neu abgeglichen. Wiederkehrende Fremdtermine erscheinen als einzelne Vorkommen. Ganztägige Termine werden als Streifen am Tagesanfang dargestellt.
 - **S-5 Zuordnung:** Jeder Block entspricht genau einem Ereignis im Timasy-Kalender. Das Ereignis trägt private Zusatzfelder mit Block-ID und Eintrags-ID, der Block speichert die Google-Ereignis-ID.
-- **S-6 \[Annahme\] Was synchronisiert wird:** Die Zeit (Start und Ende) in beide Richtungen. Titel und Beschreibung (diese enthält die Stufe, z.B. „Pflicht“) nur von Timasy nach Google; Änderungen daran in Google werden beim nächsten Abgleich überschrieben.
+- **S-6 \[Entscheid\] Was synchronisiert wird:** Die Zeit (Start und Ende) in beide Richtungen. Titel und Beschreibung (diese enthält die Stufe, z.B. „Pflicht“) nur von Timasy nach Google; Änderungen daran in Google werden beim nächsten Abgleich überschrieben.
 - **S-7 \[Entscheid\] Konflikte:** Verschiebst du einen Block in Google (z.B. am Handy), übernimmt Timasy die neue Zeit. Sind beide Seiten seit dem letzten Abgleich geändert, gewinnt die zuletzt gemachte Änderung.
-- **S-8 \[Entscheid\] Löschen:** Wird ein Block in Google gelöscht, verschwindet er auch in Timasy; die Aufgabe geht nicht verloren und kehrt in den Backlog zurück (Auslegung siehe A-2). Wird ein Block in Timasy gelöscht, wird das Ereignis in Google gelöscht. Ein in Google gelöschter Fremdtermin verschwindet aus dem Zwischenspeicher.
+- **S-8 \[Entscheid\] Löschen:** Wird ein Block in Google gelöscht, verschwindet er auch in Timasy; die Aufgabe geht nicht verloren: \[Entscheid v0.8, A-2\] Der Eintrag verliert nur seine Uhrzeit und bleibt mit Tag und Stufe bestehen („nicht eingeplant“). Wird ein Block in Timasy gelöscht, wird das Ereignis in Google gelöscht. Ein in Google gelöschter Fremdtermin verschwindet aus dem Zwischenspeicher.
 - **S-9 Zeitpunkte:** beim Start (holt alles Verpasste nach), danach alle 5 Minuten (einstellbar), solange die App läuft, sofort nach lokalen Änderungen und per Knopf „Jetzt synchronisieren“.
 - **S-10 Fehler und Offline:** Lokale Änderungen werden in einer Warteschlange gesammelt und mit wachsenden Wartezeiten erneut versucht. Die App bleibt voll nutzbar. Der Sync-Status ist dezent sichtbar (kleiner Punkt, Details in den Einstellungen). Ist der Zugang abgelaufen, erscheint der Hinweis „Neu verbinden“.
-- **S-11 \[Annahme\] Serien:** Jedes Vorkommen mit Uhrzeit wird als einzelnes Google-Ereignis angelegt (keine Google-Serien), nur innerhalb des 90-Tage-Horizonts aus R-16.
+- **S-11 \[Entscheid\] Serien:** Jedes Vorkommen mit Uhrzeit wird als einzelnes Google-Ereignis angelegt (keine Google-Serien), nur innerhalb des 90-Tage-Horizonts aus R-16.
 - **S-12:** Es werden keine Google-Tasks synchronisiert. Aufgaben leben nur in Timasy.
+- **S-13 \[Entscheid\]** Änderungen in Google, die Timasy nicht abbilden kann (ganztägig, über Mitternacht, offener Eintrag auf einen vergangenen Tag), werden auf die Zeit in Timasy zurückgesetzt.
+- **S-14 \[Entscheid\]** Termine, die im Kalender „Timasy“ von Hand (nicht von Timasy) angelegt werden, ignoriert Timasy.
+- **S-15 \[Entscheid\]** Beim ersten Abgleich mit Schreibzugriff werden alle bestehenden Blöcke einmal nach Google übertragen.
 
 ## 8. Design
 
@@ -179,13 +182,13 @@ Jeder Meilenstein ist für sich benutzbar. „Fertig, wenn“ gilt als Abnahmekr
 Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 
 - **A-1 Frontend:** *Erledigt (v0.2):* Svelte mit Vite bestätigt (T-2).
-- **A-2 „Zurück in den Backlog“ (S-8):** Ich lege es so aus, dass der Eintrag seine Uhrzeit verliert, aber mit seinem Tag und seiner Stufe bestehen bleibt („nicht eingeplant“). Die Alternative wäre, dass die Aufgabe ganz in den Backlog zurückfällt und Tag und Stufe verliert. **Bitte bestätigen.**
+- **A-2 „Zurück in den Backlog“ (S-8):** *Erledigt (v0.8):* Der Eintrag verliert nur seine Uhrzeit und bleibt mit Tag und Stufe bestehen.
 - **A-3 Standardstufe:** *Erledigt (v0.2):* Die Schnellerfassung legt Einträge standardmässig als Pflicht an (V-7).
 - **A-4 Block bei Übertragung:** *Erledigt (v0.3):* Der alte Block wird gelöscht (R-12).
 - **A-5 Fortschritt:** *Erledigt (v0.2):* Zählung nach Anzahl, nicht nach Dauer (R-2).
-- **A-6 Synchronisierte Felder:** Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
+- **A-6 Synchronisierte Felder:** *Erledigt (v0.8):* Zeit in beide Richtungen, Titel und Beschreibung nur nach Google (S-6).
 - **A-7 Berechtigungen und Anmeldung:** *Erledigt (v0.6):* siehe S-1 und S-2.
-- **A-8 Serien in Google:** Einzelne Ereignisse statt Google-Serien (S-11).
+- **A-8 Serien in Google:** *Erledigt (v0.8):* Einzelne Ereignisse statt Google-Serien (S-11).
 - **A-9 Planungshorizont:** 90 Tage für Serien (R-16, *bestätigt v0.4*); Fremdtermine ab heute bis 90 Tage voraus (S-4, *entschieden v0.5*).
 
 ## 13. Spätere Ideen (nicht Teil von Version 1)
@@ -208,3 +211,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **01.11.2026:** Zur Prüfung: R-30 (ganztägige Termine zählen nicht als Überschneidung).
 - **01.11.2026, v0.6:** A-7 gegen die Google-Dokumentation geprüft: Berechtigungen in S-2 präzisiert (nur Kalenderliste lesen, Termine lesen, eigener Kalender); alle drei schon in M4 anfragen. Projekt „In Produktion“, weil Tokens im Status „Testing“ nach 7 Tagen ablaufen (S-1).
 - **01.11.2026, v0.7:** S-1 geändert: Projekt bleibt im Status „Testing“ (eigenes Konto als Testnutzer), Neu verbinden alle 7 Tage. Grund: Veröffentlichen verlangt Startseite und Datenschutzerklärung auf eigener Domain (Seite „Branding“). „Intern“ steht nur Google-Workspace-Organisationen offen.
+- **07.11.2026:** M4 abgenommen.
+- **07.11.2026, v0.8:** Vor Beginn von M5 bestätigt: A-2 (Block in Google gelöscht → Eintrag bleibt mit Tag und Stufe, ohne Uhrzeit), A-6/S-6, A-8/S-11, S-7 (zuletzt gemachte Änderung gewinnt), R-30. Neu: S-13 nicht abbildbare Änderungen werden zurückgesetzt, S-14 von Hand angelegte Termine im Timasy-Kalender werden ignoriert, S-15 bestehende Blöcke werden einmal übertragen.
