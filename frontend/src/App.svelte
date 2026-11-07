@@ -5,7 +5,8 @@
   // Tastenkürzel (wenn kein Eingabefeld aktiv ist):
   //   n = Schnellerfassung, h = Heute, w = Woche, m = Monat, b = Backlog, s = Serien, e = Einstellungen
   import { onMount } from 'svelte'
-  import { app, commitPendingDelete, pollSync, reload, undoDelete } from './lib/state.svelte.js'
+  import { app, applyTheme, commitPendingDelete, pollSync, reload, undoDelete } from './lib/state.svelte.js'
+  import { api } from './lib/api.js'
   import QuickCapture from './components/QuickCapture.svelte'
   import Today from './views/Today.svelte'
   import Backlog from './views/Backlog.svelte'
@@ -38,6 +39,7 @@
   onMount(() => {
     reload()
     pollSync()
+    api.settings().then((s) => applyTheme(s.theme)).catch(() => {})
     // Zustand des Google-Abgleichs alle 10 Sekunden abfragen (S-10)
     const syncTimer = setInterval(pollSync, 10_000)
     // Jede Minute neu laden: So greift der Tageswechsel (R-9), solange die App läuft.

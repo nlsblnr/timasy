@@ -1,10 +1,41 @@
 <script>
-  // Einstellungen (V-6), Teil M4: Google-Verbindung, Sync-Status, Kalenderauswahl.
-  // Weitere Einstellungen (Zeitzone, Intervall, Theme, Backup) folgen in M6.
+  // Einstellungen (V-6): Google-Verbindung, Sync-Status und -Intervall,
+  // Kalenderauswahl, Theme, Backup. Die Zeitzone ist fest Europe/Zurich (v0.9).
   import { api } from '../lib/api.js'
-  import { app, pollSync, showError } from '../lib/state.svelte.js'
+  import { app, applyTheme, pollSync, showError } from '../lib/state.svelte.js'
 
   let calendars = $state([])
+  let settings = $state(null)
+  let backups = $state([])
+  let backupInfo = $state('')
+
+  api.settings().then((s) => (settings = s)).catch(showError)
+  const loadBackups = () => api.backups().then((b) => (backups = b)).catch(showError)
+  loadBackups()
+
+  async function save(change) {
+    try {
+      settings = await api.saveSettings(change)
+      applyTheme(settings.theme)
+      pollSync()
+    } catch (e) {
+      showError(e)
+    }
+  }
+
+  async function makeBackup() {
+    try {
+      const r = await api.createBackup()
+      backupInfo = `Gespeichert als ${r.name}`
+      loadBackups()
+    } catch (e) {
+      showError(e)
+    }
+  }
+
+  const sizeText = (bytes) => `${Math.max(1, Math.round(bytes / 1024))} KB`
+  const themes = [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']]
+  const intervals = [1, 5, 10, 15, 30, 60]
 
   // Beim Öffnen sofort neu prüfen, z.B. nachdem credentials.json abgelegt wurde
   let checked = false   // nur einmal pro Öffnen der Seite
@@ -84,6 +115,58 @@
   {/if}
 </section>
 
+{#if settings}
+  <section>
+    <h2>Abgleich</h2>
+    <label class="inline">Automatisch abgleichen alle
+      <select value={settings.sync_interval_minutes}
+              onchange={(e) => save({ sync_interval_minutes: Number(e.target.value) })}>
+        {#each intervals as m}<option value={m}>{m} {m === 1 ? 'Minute' : 'Minuten'}</option>{/each}
+      </select>
+    </label>
+    <p class="sub">Zusätzlich sofort nach jeder Änderung in Timasy und mit „Jetzt synchronisieren“.</p>
+  </section>
+
+  <section>
+    <h2>Darstellung</h2>
+    <div class="segmented" role="radiogroup" aria-label="Theme">
+      {#each themes as [value, label]}
+        <button role="radio" aria-checked={settings.theme === value}
+                class:active={settings.theme === value}
+                onclick={() => save({ theme: value })}>{label}</button>
+      {/each}
+    </div>
+  </section>
+{/if}
+
+<section>
+  <h2>Backup</h2>
+  <p class="sub">Alle Daten liegen in einer Datei. Ein Backup ist eine vollständige Kopie davon im
+    Ordner <code>data/backups/</code>. Timasy erstellt zusätzlich jeden Tag automatisch eines und
+    behält die letzten 14.</p>
+  <div class="actions">
+    <button class="filled" onclick={makeBackup}>Backup erstellen</button>
+    {#if backupInfo}<span class="sub ok">{backupInfo}</span>{/if}
+  </div>
+  {#if backups.length}
+    <ul class="backups">
+      {#each backups.slice(0, 5) as b (b.name)}
+        <li><span>{timeFormat.format(new Date(b.created))}</span>
+          <span class="sub">{b.automatic ? 'automatisch' : 'manuell'} · {sizeText(b.size)}</span></li>
+      {/each}
+    </ul>
+  {/if}
+  <details class="restore">
+    <summary>Wiederherstellen</summary>
+    <ol>
+      <li>Timasy beenden (im Terminal <kbd>Ctrl</kbd>+<kbd>C</kbd>).</li>
+      <li><code>data/timasy.db</code> umbenennen, z.B. in <code>timasy-alt.db</code>.</li>
+      <li>Das gewünschte Backup aus <code>data/backups/</code> nach <code>data/timasy.db</code> kopieren.</li>
+      <li>Timasy wieder starten.</li>
+    </ol>
+  </details>
+</section>
+
 {#if calendars.length}
   <section>
     <h2>Termine anzeigen aus</h2>
@@ -119,6 +202,19 @@
   li { padding: 6px 0; }
   .check { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 1rem; }
   .swatch { width: 12px; height: 12px; border-radius: 4px; }
+  .inline { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 1rem; }
+  .inline select { width: auto; }
+  .segmented { display: inline-flex; background: var(--surface); border-radius: 99px; padding: 3px; }
+  .segmented button { color: var(--muted); }
+  .segmented button.active { background: var(--surface-raised); color: var(--text);
+                             box-shadow: 0 1px 3px var(--shadow); font-weight: 600; }
+  .ok { margin: 0; align-self: center; }
+  .backups { margin-top: 12px; }
+  .backups li { display: flex; gap: 12px; padding: 4px 0; }
+  .backups .sub { margin: 0; }
+  .restore { margin-top: 8px; font-size: 0.9rem; }
+  .restore summary { cursor: pointer; color: var(--accent); }
+  .restore ol { padding-left: 20px; color: var(--muted); }
   code { font-size: 0.85em; background: var(--surface); padding: 1px 6px; border-radius: 4px; }
   :global(.dot) { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
   :global(.dot.ok) { background: var(--accent); }

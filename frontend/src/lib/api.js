@@ -36,6 +36,11 @@ export const api = {
   schedule: (entryId, data) => request('POST', `/api/entries/${entryId}/schedule`, data),
   changeBlock: (id, data) => request('PATCH', `/api/blocks/${id}`, data),
   removeBlock: (id) => request('DELETE', `/api/blocks/${id}`),
+  // Einstellungen und Backup (M6)
+  settings: () => request('GET', '/api/settings'),
+  saveSettings: (data) => request('PATCH', '/api/settings', data),
+  backups: () => request('GET', '/api/backups'),
+  createBackup: () => request('POST', '/api/backups'),
   // Google und Abgleich (M4)
   syncStatus: () => request('GET', '/api/sync/status'),
   syncNow: () => request('POST', '/api/sync'),

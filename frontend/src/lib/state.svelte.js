@@ -64,3 +64,11 @@ export async function pollSync() {
     if (finished) reload()
   } catch {}
 }
+
+// --- Theme (V-6) ----------------------------------------------------------------
+// "system" folgt der Systemeinstellung; "light"/"dark" setzen data-theme am <html>.
+
+export function applyTheme(theme) {
+  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
+  else delete document.documentElement.dataset.theme
+}

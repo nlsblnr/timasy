@@ -18,8 +18,11 @@
   color-scheme: light dark;
 }
 
+/* Dunkelmodus: nach Systemeinstellung, ausser in den Einstellungen ist "Hell"
+   gewählt; oder immer, wenn "Dunkel" gewählt ist (V-6). Die Wahl steht als
+   data-theme am <html>-Element. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --accent: #a9c0ff;
     --text: #e4e5ea;
     --muted: #979ba5;
@@ -35,6 +38,23 @@
     --inverse-accent: #3f6ad8;
   }
 }
+:root[data-theme="dark"] {
+  --accent: #a9c0ff;
+  --text: #e4e5ea;
+  --muted: #979ba5;
+  --calm: #c9b07e;
+  --bg: #131417;
+  --surface: #1d1f24;
+  --surface-raised: #24262c;
+  --line: #2c2f36;
+  --track: #2c2f36;
+  --shadow: rgba(0, 0, 0, 0.4);
+  --inverse: #e4e5ea;
+  --inverse-text: #1b1c1f;
+  --inverse-accent: #3f6ad8;
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
