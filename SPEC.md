@@ -1,6 +1,6 @@
 # Timasy – Spezifikation
 
-*Version 0.8 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
+*Version 0.9 · Stand 31. Oktober 2026 · Persönliches Planungstool für eine Person, lokal auf dem Desktop · Oberfläche auf Deutsch*
 
 ## 0. So benutzt du dieses Dokument
 
@@ -52,7 +52,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **Series:** `id`, `task_id` (Vorlage), `rrule` (Wiederholungsregel), `starts_on`, `end_type` (`never`, `until`, `count`), `until_date`, `count`, `tier`, `scope`, optional feste Uhrzeit und Dauer, `carry_over` (Standard: nein).
 - **ExternalEvent** (Zwischenspeicher): `calendar_id`, `google_event_id`, `title`, `start`, `end`, `all_day`, `updated`.
 - **SyncState:** pro Kalender der Sync-Token und der Zeitpunkt des letzten Abgleichs; ID des Timasy-Kalenders.
-- **Settings:** Zeitzone (Standard `Europe/Zurich`), Wochenstart (Montag), Sync-Intervall (5 Minuten), gewählte Kalender, Theme.
+- **Settings:** Zeitzone (fest `Europe/Zurich`, v0.9), Wochenstart (Montag), Sync-Intervall (5 Minuten), gewählte Kalender, Theme.
 
 **Beziehungen:** Eine Aufgabe hat viele Einträge (nacheinander, z.B. durch Übertragung); ein Eintrag hat null oder einen Block. Eine Aufgabe gilt als zugewiesen, solange sie einen offenen Eintrag hat. Sie gilt als erledigt, sobald einer ihrer Einträge erledigt ist; erledigte Aufgaben erscheinen nicht im Backlog.
 
@@ -115,7 +115,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **V-3 Monat:** Monatsraster. Pro Tag eine dezente Zahl offener Pflicht-Einträge und kleine Striche für Termine. Klick öffnet den Tag. Vor- und Zurückblättern.
 - **V-4 Backlog:** Liste aller Aufgaben ohne offenen Eintrag, mit Suche und Tag-Filter. Von hier aus Zuweisen zu Tag oder Woche inklusive Stufe.
 - **V-5 Serien:** Liste aller Serien; bearbeiten, beenden, `carry_over` umschalten.
-- **V-6 Einstellungen:** Google-Verbindung und Sync-Status, Kalenderauswahl, Zeitzone, Sync-Intervall, Theme, Backup (Kopie der Datenbankdatei erstellen).
+- **V-6 Einstellungen:** Google-Verbindung und Sync-Status, Kalenderauswahl, Sync-Intervall, Theme (System, Hell, Dunkel), Backup (Kopie der Datenbankdatei erstellen). \[Entscheid v0.9\] Die Zeitzone ist fest `Europe/Zurich` und nicht einstellbar. Zusätzlich zum Knopf erstellt Timasy beim ersten Start eines Tages automatisch ein Backup; die letzten 14 automatischen bleiben erhalten (Ordner `data/backups/`).
 - **V-7 Schnellerfassung:** Ein Tastenkürzel öffnet in jeder Ansicht eine Eingabezeile. Titel eingeben, Enter. In Heute, Woche und Monat entsteht ein Eintrag für den angezeigten Tag, im Backlog eine Aufgabe ohne Zeitraum. **\[Entscheid\]** Standardstufe ist Pflicht, per Tastenkürzel umschaltbar. `#name` im Titel fügt einen Tag hinzu. Details (Stufe, Zeitraum, Dauer, Notiz, Tags, Uhrzeit, Wiederholung) im erweiterten Dialog.
 - **V-8 Wiederholung erfassen:** Wie in Kalender-Apps: „Wiederholt sich“ → Rhythmus, Intervall, Wochentage, Ende (nie / am Datum / nach n Mal), mit Vorschau der nächsten Vorkommen.
 
@@ -142,7 +142,7 @@ Alle Felder sind fachlich beschrieben; die genauen Datenbanktypen legt die Umset
 - **UX-1:** Vorbild sind die neuesten Android-Versionen (Material 3) und iOS: einfach, klar, effizient.
 - **UX-2:** Ruhige Optik: viel Weissraum, grosse klare Typografie mit Systemschrift, weiche Rundungen, ein einziger Akzentfarbton; Statusfarben nur dezent. Hell- und Dunkelmodus folgen der Systemeinstellung.
 - **UX-3:** Keine Ablenkung: keine Pop-ups, Zähler-Badges, Töne oder Effekte. Animationen nur kurz und funktional.
-- **UX-4:** Häufige Aktionen (erfassen, abhaken, auf einen anderen Tag verschieben, Ansicht wechseln) gehen per Tastatur und in höchstens zwei Schritten.
+- **UX-4:** Häufige Aktionen (erfassen, abhaken, auf einen anderen Tag verschieben, Ansicht wechseln) gehen per Tastatur und in höchstens zwei Schritten. \[Entscheid v0.9\] In der Heute-Ansicht: ↑/↓ Eintrag wählen, Leertaste abhaken, Shift+→/Shift+← gewählten Eintrag einen Tag später/früher, t Stufe wechseln, Enter bearbeiten, ←/→ vorheriger/nächster Tag. Mit der Maus: Menüpunkt „Verschieben auf …“ (morgen oder Datum). Eine Übersicht aller Tastenkürzel öffnet sich mit `?`.
 - **UX-5:** „Überfällig“ ist ein sachlicher Hinweis, kein Alarm: keine grelle Warnfarbe.
 - **UX-6:** Das Layout ist fliessend gebaut, damit eine spätere Handy-Ansicht möglich bleibt (nicht Teil von Version 1).
 
@@ -213,3 +213,5 @@ Prüfe diese Punkte; ändere, was nicht passt, und trage es in Abschnitt 14 ein.
 - **01.11.2026, v0.7:** S-1 geändert: Projekt bleibt im Status „Testing“ (eigenes Konto als Testnutzer), Neu verbinden alle 7 Tage. Grund: Veröffentlichen verlangt Startseite und Datenschutzerklärung auf eigener Domain (Seite „Branding“). „Intern“ steht nur Google-Workspace-Organisationen offen.
 - **07.11.2026:** M4 abgenommen.
 - **07.11.2026, v0.8:** Vor Beginn von M5 bestätigt: A-2 (Block in Google gelöscht → Eintrag bleibt mit Tag und Stufe, ohne Uhrzeit), A-6/S-6, A-8/S-11, S-7 (zuletzt gemachte Änderung gewinnt), R-30. Neu: S-13 nicht abbildbare Änderungen werden zurückgesetzt, S-14 von Hand angelegte Termine im Timasy-Kalender werden ignoriert, S-15 bestehende Blöcke werden einmal übertragen.
+- **07.11.2026:** M5 abgenommen.
+- **07.11.2026, v0.9:** Vor Beginn von M6: Zeitzone fest Europe/Zurich (aus V-6 entfernt); tägliches automatisches Backup (14 behalten) zusätzlich zum Knopf; Tastenkürzel für UX-4 festgelegt, mit Übersicht unter `?`.
