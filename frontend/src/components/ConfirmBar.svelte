@@ -10,7 +10,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions (Esc bricht ab) -->
-<div class="confirm" role="alertdialog" aria-label={message}
+<div class="confirm" role="alertdialog" tabindex="-1" aria-label={message}
      onkeydown={(e) => e.key === 'Escape' && oncancel()}>
   <span>{message}</span>
   <button type="button" class="text" onclick={oncancel}>Abbrechen</button>

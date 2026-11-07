@@ -31,11 +31,16 @@
       showError(e)
     }
   }
+
+  // Beim Öffnen gleich in den Titel springen (Tastatur, UX-4; Esc schliesst)
+  function focusOnOpen(node) {
+    node.focus()
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions (Esc schliesst) -->
 <form class="editor" onsubmit={save} onkeydown={(e) => e.key === 'Escape' && onclose()}>
-  <label>Titel <input type="text" bind:value={form.title} required /></label>
+  <label>Titel <input type="text" bind:value={form.title} required use:focusOnOpen /></label>
   <label>Notiz <textarea rows="3" bind:value={form.notes}></textarea></label>
   <div class="two">
     <label>Geschätzte Dauer (Minuten)

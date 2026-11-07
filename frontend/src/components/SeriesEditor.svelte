@@ -82,6 +82,11 @@
       showError(e)
     }
   }
+
+  // Beim Öffnen gleich in den Titel springen (Tastatur, UX-4; Esc schliesst)
+  function focusOnOpen(node) {
+    node.focus()
+  }
 </script>
 
 {#if form}
@@ -95,7 +100,7 @@
       </div>
     {/if}
 
-    <label>Titel <input type="text" bind:value={form.title} required /></label>
+    <label>Titel <input type="text" bind:value={form.title} required use:focusOnOpen /></label>
     <label>Notiz <textarea rows="2" bind:value={form.notes}></textarea></label>
     <div class="row">
       <label>Stufe

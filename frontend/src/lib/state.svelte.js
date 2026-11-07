@@ -14,6 +14,8 @@ export const app = $state({
   error: '',
   pendingDelete: null,    // { taskId, title } während der Rückgängig-Frist
   sync: null,             // Zustand des Google-Abgleichs (S-10)
+  helpOpen: false,        // Übersicht der Tastenkürzel offen?
+  selectedId: null,       // per Tastatur gewählter Eintrag in Heute (UX-4)
 })
 
 export function reload() {

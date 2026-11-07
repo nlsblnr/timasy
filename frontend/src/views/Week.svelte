@@ -4,6 +4,7 @@
   // Tages-Einträgen; diese lassen sich auf einen Tag oder eine Uhrzeit ziehen.
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
+  import { isShortcut } from '../lib/keys.js'
   import { addDays, formatShort } from '../lib/dates.js'
   import EntryItem from '../components/EntryItem.svelte'
   import ProgressBar from '../components/ProgressBar.svelte'
@@ -37,6 +38,13 @@
     return 1 + Math.round(((d - firstThursday) / 86400000 - 3 + ((firstThursday.getDay() + 6) % 7)) / 7)
   }
 </script>
+
+<!-- ←/→: vorherige/nächste Woche bzw. Monat (UX-4) -->
+<svelte:window onkeydown={(e) => {
+  if (!data || app.helpOpen || !isShortcut(e) || e.shiftKey) return
+  if (e.key === 'ArrowLeft') { e.preventDefault(); app.date = addDays(data.week_start, -7) }
+  if (e.key === 'ArrowRight') { e.preventDefault(); app.date = addDays(data.week_start, 7) }
+}} />
 
 {#if data}
   <header>

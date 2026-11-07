@@ -2,7 +2,7 @@
   // Ein Eintrag in einer Liste: abhaken, Stufe wechseln, bearbeiten,
   // aus dem Zeitraum entfernen oder die Aufgabe löschen.
   import { api } from '../lib/api.js'
-  import { overdueText } from '../lib/dates.js'
+  import { addDays, formatShort, overdueText } from '../lib/dates.js'
   import { deleteTaskWithUndo, reload, showError } from '../lib/state.svelte.js'
   import { ENTRY_MIME, formatTime } from '../lib/timegrid.js'
   import ConfirmBar from './ConfirmBar.svelte'
@@ -10,8 +10,12 @@
   import TaskEditor from './TaskEditor.svelte'
 
   // assignTo: optional, ein Tag, dem ein Wochen-Eintrag zugewiesen werden kann (R-6)
-  let { entry, assignTo = null, assignLabel = '' } = $props()
-  let editing = $state(false)
+  // selected/onselect: Auswahl per Tastatur in Heute (UX-4); editing lässt sich von aussen öffnen (Enter)
+  let { entry, assignTo = null, assignLabel = '', selected = false, onselect = null,
+        editing = $bindable(false) } = $props()
+  let moving = $state(false)          // Datumsfeld für "Verschieben auf …" offen
+  let moveDate = $state('')
+  let row
   let confirming = $state(null)   // 'following' oder 'all', während die Rückfrage offen ist
   let menu  // das <details>-Element des Menüs "⋯"
 
@@ -48,13 +52,26 @@
     call(() => api.changeEntry(entry.id, { tier: entry.tier === 'must' ? 'bonus' : 'must' }))
   const assign = () => call(() => api.changeEntry(entry.id, { day: assignTo }))
   const remove = () => call(() => api.removeEntry(entry.id))
+  // "Verschieben auf …" (UX-4): Tages-Eintrag auf einen anderen Tag legen
+  const moveTo = (day) => call(() => api.changeEntry(entry.id, { day }))
+  const tomorrow = $derived(addDays(entry.period_start, 1))
+
+  // Gewählten Eintrag sichtbar halten
+  $effect(() => {
+    if (selected) row?.scrollIntoView({ block: 'nearest' })
+  })
+
+  function select(event) {
+    if (onselect && !event.target.closest('button, input, summary, a, form')) onselect()
+  }
   // R-17: Löschen bei Serien – nur dieses, dieses und folgende, alle
   const deleteOccurrence = (mode) => call(() => api.deleteOccurrence(entry.id, mode))
 </script>
 
 <svelte:window onclick={closeMenu} onkeydown={closeMenu} />
 
-<li class="entry" class:done class:missed {draggable} {ondragstart}>
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions (Tastatur über ↑/↓) -->
+<li class="entry" class:done class:missed class:selected {draggable} {ondragstart} bind:this={row} onclick={select}>
   <div class="main">
     <input type="checkbox" checked={done} onchange={toggleDone}
            aria-label="{entry.title} abhaken" />
@@ -80,6 +97,10 @@
         <summary class="icon" title="Mehr">⋯</summary>
         <div class="menu">
           <button class="text" onclick={() => (editing = true)}>Bearbeiten</button>
+          {#if entry.scope === 'day' && entry.status === 'open'}
+            <button class="text" onclick={() => moveTo(tomorrow)}>Verschieben auf {formatShort(tomorrow)}</button>
+            <button class="text" onclick={() => { moving = true; moveDate = tomorrow }}>Verschieben auf …</button>
+          {/if}
           {#if entry.block}
             <button class="text" onclick={() => call(() => api.removeBlock(entry.block.id))}>
               Nicht mehr einplanen
@@ -107,6 +128,13 @@
       onconfirm={() => { const mode = confirming; confirming = null; deleteOccurrence(mode) }}
       oncancel={() => (confirming = null)} />
   {/if}
+  {#if moving}
+    <form class="move" onsubmit={(e) => { e.preventDefault(); moving = false; moveTo(moveDate) }}>
+      <label>Verschieben auf <input type="date" bind:value={moveDate} required /></label>
+      <button type="button" class="text" onclick={() => (moving = false)}>Abbrechen</button>
+      <button type="submit" class="filled">Verschieben</button>
+    </form>
+  {/if}
   {#if editing && isSeries}
     <SeriesEditor seriesId={entry.series_id} {entry} onclose={() => (editing = false)} />
   {:else if editing}
@@ -116,6 +144,9 @@
 
 <style>
   .entry[draggable='true'] { cursor: grab; }
+  .entry.selected { background: var(--surface); box-shadow: -8px 0 0 var(--surface), 8px 0 0 var(--surface); border-radius: 4px; }
+  .move { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding-top: 10px; }
+  .move label { flex: 0 1 220px; }
   .entry { list-style: none; padding: 10px 0; border-bottom: 1px solid var(--line); }
   .main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
   .info { flex: 1 1 160px; display: grid; gap: 2px; min-width: 0; }

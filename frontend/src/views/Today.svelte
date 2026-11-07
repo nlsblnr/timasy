@@ -9,6 +9,8 @@
   import ProgressBar from '../components/ProgressBar.svelte'
   import TagFilter from '../components/TagFilter.svelte'
   import TimeGrid from '../components/TimeGrid.svelte'
+  import { isShortcut } from '../lib/keys.js'
+  import { reload } from '../lib/state.svelte.js'
 
   let data = $state(null)
   let tagFilter = $state(null)
@@ -39,8 +41,62 @@
     data ? [...new Set([...data.entries, ...data.week_entries].flatMap((e) => e.task.tags))].sort() : [])
   // Einem vergangenen Tag zuweisen ergibt keinen Sinn: Die Übertragung (R-9)
   // würde den Eintrag sofort als überfällig auf heute legen.
+  // --- Tastatur (UX-4) ------------------------------------------------------
+  // ↑/↓ wählen, Leertaste abhaken, Shift+←/→ verschieben, t Stufe, Enter
+  // bearbeiten, ←/→ Tag wechseln. Übersicht: Taste ?
+  let ordered = $derived([...must, ...bonus])
+  let editingId = $state(null)
+  let selected = $derived(ordered.find((e) => e.id === app.selectedId) ?? null)
+
+  async function call(fn) {
+    try {
+      await fn()
+      reload()
+    } catch (e) {
+      showError(e)
+    }
+  }
+
+  function step(delta) {
+    if (!ordered.length) return
+    const i = ordered.findIndex((e) => e.id === app.selectedId)
+    const next = i === -1 ? (delta > 0 ? 0 : ordered.length - 1)
+                          : Math.min(Math.max(i + delta, 0), ordered.length - 1)
+    app.selectedId = ordered[next].id
+  }
+
+  function onkeydown(e) {
+    if (!data || app.helpOpen || editingId || !isShortcut(e)) return
+    const key = e.key
+    if (key === 'ArrowDown' || key === 'ArrowUp') {
+      e.preventDefault()
+      step(key === 'ArrowDown' ? 1 : -1)
+    } else if ((key === 'ArrowLeft' || key === 'ArrowRight') && e.shiftKey) {
+      if (!selected || selected.status !== 'open') return
+      e.preventDefault()
+      const moved = selected
+      // Auswahl auf den Nachbarn setzen, da der Eintrag die Liste verlässt
+      const i = ordered.indexOf(moved)
+      app.selectedId = (ordered[i + 1] ?? ordered[i - 1])?.id ?? null
+      call(() => api.changeEntry(moved.id, { day: addDays(moved.period_start, key === 'ArrowRight' ? 1 : -1) }))
+    } else if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      e.preventDefault()
+      app.date = addDays(data.date, key === 'ArrowRight' ? 1 : -1)
+    } else if (key === ' ' && selected) {
+      e.preventDefault()
+      call(() => api.changeEntry(selected.id, { done: selected.status !== 'done' }))
+    } else if (key === 't' && selected) {
+      call(() => api.changeEntry(selected.id, { tier: selected.tier === 'must' ? 'bonus' : 'must' }))
+    } else if (key === 'Enter' && selected) {
+      e.preventDefault()
+      editingId = selected.id
+    }
+  }
+
   let relative = $derived(data ? relativeLabel(data.date, data.today) : null)
 </script>
+
+<svelte:window {onkeydown} />
 
 {#if data}
   <div class="layout">
@@ -73,14 +129,22 @@
 
       <h2>Pflicht</h2>
       {#if must.length}
-        <ul>{#each must as entry (entry.id)}<EntryItem {entry} />{/each}</ul>
+        <ul>{#each must as entry (entry.id)}
+          <EntryItem {entry} selected={entry.id === app.selectedId}
+                     onselect={() => (app.selectedId = entry.id)}
+                     bind:editing={() => editingId === entry.id, (v) => (editingId = v ? entry.id : null)} />
+        {/each}</ul>
       {:else}
         <p class="empty">Keine Pflicht-Einträge. Mit <kbd>n</kbd> erfassen.</p>
       {/if}
 
       <h2>Bonus</h2>
       {#if bonus.length}
-        <ul>{#each bonus as entry (entry.id)}<EntryItem {entry} />{/each}</ul>
+        <ul>{#each bonus as entry (entry.id)}
+          <EntryItem {entry} selected={entry.id === app.selectedId}
+                     onselect={() => (app.selectedId = entry.id)}
+                     bind:editing={() => editingId === entry.id, (v) => (editingId = v ? entry.id : null)} />
+        {/each}</ul>
       {:else}
         <p class="empty">Keine Bonus-Einträge.</p>
       {/if}

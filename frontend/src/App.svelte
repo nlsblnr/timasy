@@ -2,12 +2,14 @@
   // Rahmen der App: Navigation, Tastenkürzel, Schnellerfassung,
   // Rückgängig-Leiste und Fehlermeldungen.
   //
-  // Tastenkürzel (wenn kein Eingabefeld aktiv ist):
-  //   n = Schnellerfassung, h = Heute, w = Woche, m = Monat, b = Backlog, s = Serien, e = Einstellungen
+  // Tastenkürzel (wenn kein Eingabefeld aktiv ist): siehe lib/keys.js,
+  // Übersicht mit ? (ShortcutHelp)
   import { onMount } from 'svelte'
   import { app, applyTheme, commitPendingDelete, pollSync, reload, undoDelete } from './lib/state.svelte.js'
   import { api } from './lib/api.js'
   import QuickCapture from './components/QuickCapture.svelte'
+  import ShortcutHelp from './components/ShortcutHelp.svelte'
+  import { isShortcut } from './lib/keys.js'
   import Today from './views/Today.svelte'
   import Backlog from './views/Backlog.svelte'
   import Month from './views/Month.svelte'
@@ -17,16 +19,11 @@
 
   let quickOpen = $state(false)
 
-  // Tastenkürzel nur unterdrücken, wenn gerade Text getippt wird
-  // (nicht bei Checkboxen oder Knöpfen, z.B. direkt nach dem Abhaken).
-  const NON_TEXT_INPUTS = ['checkbox', 'radio', 'button', 'submit', 'range', 'color']
-  function isTyping(target) {
-    if (target.tagName === 'INPUT') return !NON_TEXT_INPUTS.includes(target.type)
-    return ['TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable
-  }
-
   function onkeydown(e) {
-    if (e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return
+    if (app.helpOpen && e.key === 'Escape') { app.helpOpen = false; return }
+    if (!isShortcut(e)) return
+    if (e.key === '?') { app.helpOpen = !app.helpOpen; return }
+    if (app.helpOpen) return
     if (e.key === 'n') { e.preventDefault(); quickOpen = true }
     if (e.key === 'h') app.view = 'today'
     if (e.key === 'w') app.view = 'week'
@@ -81,6 +78,8 @@
     {#if app.sync?.state === 'reconnect'}
       <button class="text" onclick={() => (app.view = 'settings')}>Neu verbinden</button>
     {/if}
+    <button class="icon help" onclick={() => (app.helpOpen = true)}
+            title="Tastenkürzel (?)" aria-label="Tastenkürzel anzeigen">⌨</button>
     <button class="tab" class:active={app.view === 'settings'} onclick={() => (app.view = 'settings')}
             title="Einstellungen (e)">Einstellungen</button>
     <button class="filled" onclick={() => (quickOpen = true)} title="Neue Aufgabe (n)">+ Neu</button>
@@ -99,6 +98,8 @@
     {:else}<Backlog />{/if}
   </main>
 
+  {#if app.helpOpen}<ShortcutHelp onclose={() => (app.helpOpen = false)} />{/if}
+
   {#if app.pendingDelete}
     <div class="snackbar" role="status">
       <span>«{app.pendingDelete.title}» gelöscht</span>
@@ -116,6 +117,7 @@
   .brand { font-weight: 700; margin-right: 16px; }
   .spacer { flex: 1; }
   .syncdot { padding: 6px 10px; display: flex; }
+  .help { font-size: 1.1rem; color: var(--muted); }
   .quick { margin-bottom: 24px; }
   .snackbar {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);

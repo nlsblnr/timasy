@@ -4,6 +4,7 @@
   // Klick auf einen Tag öffnet ihn in der Heute-Ansicht.
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
+  import { isShortcut } from '../lib/keys.js'
   import { parseISO, toISO } from '../lib/dates.js'
 
   let data = $state(null)
@@ -34,6 +35,13 @@
   const weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
   const MAX_STROKES = 5
 </script>
+
+<!-- ←/→: vorherige/nächste Woche bzw. Monat (UX-4) -->
+<svelte:window onkeydown={(e) => {
+  if (!data || app.helpOpen || !isShortcut(e) || e.shiftKey) return
+  if (e.key === 'ArrowLeft') { e.preventDefault(); shiftMonth(-1) }
+  if (e.key === 'ArrowRight') { e.preventDefault(); shiftMonth(1) }
+}} />
 
 {#if data}
   <header>
