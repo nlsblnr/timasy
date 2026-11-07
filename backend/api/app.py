@@ -116,6 +116,7 @@ class SeriesPatch(BaseModel):
 class SettingsPatch(BaseModel):
     """Einstellungen (V-6); nur mitgeschickte Felder werden geändert."""
     theme: Literal["system", "light", "dark"] | None = None
+    accent: Literal["blue", "green", "violet", "orange", "rose"] | None = None   # UX-2 (v0.10)
     sync_interval_minutes: int | None = Field(default=None, ge=1, le=60)
 
 
@@ -149,6 +150,7 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
         try:
             return {
                 "theme": repo.get_setting(conn, "theme") or "system",
+                "accent": repo.get_setting(conn, "accent") or "blue",
                 "sync_interval_minutes": int(repo.get_setting(conn, "sync_interval_minutes") or 5),
             }
         finally:
@@ -379,6 +381,8 @@ def create_app(db_path: Path | str, sync_service: SyncService | None = None,
     def patch_settings(body: SettingsPatch, conn: sqlite3.Connection = Depends(get_conn)):
         if body.theme is not None:
             repo.set_setting(conn, "theme", body.theme)
+        if body.accent is not None:
+            repo.set_setting(conn, "accent", body.accent)
         if body.sync_interval_minutes is not None:
             repo.set_setting(conn, "sync_interval_minutes", str(body.sync_interval_minutes))
             sync.set_interval(body.sync_interval_minutes)

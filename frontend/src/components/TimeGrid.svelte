@@ -5,7 +5,7 @@
   //  - Einträge aus Listen hineinziehen: Block anlegen
   //  - Einträge auf den Tageskopf ziehen: nur dem Tag zuweisen (V-2)
   //  - Fremdtermine (grau, nur lesen, S-4); ganztägige als Streifen oben
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
   import { api } from '../lib/api.js'
   import { reload, showError } from '../lib/state.svelte.js'
   import { formatShort, parseISO } from '../lib/dates.js'
@@ -21,7 +21,32 @@
   let drag = $state(null)   // laufendes Verschieben/Ziehen eines Blocks
   let dropHint = $state(null) // { day, minute } beim Hineinziehen aus einer Liste
 
-  onMount(() => (scroller.scrollTop = SCROLL_TO_HOUR * HOUR_PX))
+  // Aktuelle Uhrzeit in Minuten (Zeitzone Europe/Zurich), jede Minute neu (V-2, v0.10)
+  const clockFormat = new Intl.DateTimeFormat('de-CH', {
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Zurich',
+  })
+  function currentMinute() {
+    const [h, m] = clockFormat.format(new Date()).split(':').map(Number)
+    return h * 60 + m
+  }
+  let nowMinute = $state(currentMinute())
+  let showsToday = $derived(days.includes(today))
+
+  onMount(() => {
+    const timer = setInterval(() => (nowMinute = currentMinute()), 60_000)
+    return () => clearInterval(timer)
+  })
+
+  // Beim Öffnen und bei jedem Wechsel von Tag oder Woche scrollen:
+  // ist heute sichtbar, auf eine Stunde vor jetzt, sonst auf 7 Uhr (V-2, v0.10)
+  let scrolledFor = ''
+  $effect(() => {
+    const key = days.join()
+    if (key === scrolledFor || !scroller) return
+    scrolledFor = key
+    const minute = showsToday ? Math.max(0, untrack(() => nowMinute) - 60) : SCROLL_TO_HOUR * 60
+    scroller.scrollTop = (minute / 60) * HOUR_PX
+  })
 
   // Alle Blöcke mit Position; der gerade gezogene Block an seiner neuen Stelle
   let placed = $derived(
@@ -192,6 +217,9 @@
            ondragover={onDragOver} ondragleave={() => (dropHint = null)} ondrop={onDrop}>
         {#each columns as col (col.day)}
           <div class="column" class:past={col.day < today}>
+            {#if col.day === today}
+              <div class="now" style="top: {(nowMinute / 60) * HOUR_PX}px" title="Jetzt {formatTime(nowMinute)}"></div>
+            {/if}
             {#if dropHint?.day === col.day}
               <div class="drop-hint" style="top: {(dropHint.minute / 60) * HOUR_PX}px">
                 {formatTime(dropHint.minute)}
@@ -215,7 +243,9 @@
               <div
                 class="block" class:done class:dragging={drag?.entry.id === item.id}
                 class:conflict={item.entry.conflict}
-                class:short={item.end - item.start <= 30}
+                class:short={item.end - item.start <= 45}
+                class:tall={item.end - item.start >= 90 && pos.lanes === 1}
+                title="{item.entry.title}, {formatTime(item.start)}–{formatTime(item.end)}"
                 style="top: {(item.start / 60) * HOUR_PX}px;
                        height: {((item.end - item.start) / 60) * HOUR_PX - 2}px;
                        left: {(pos.lane / pos.lanes) * 100}%;
@@ -256,7 +286,8 @@
   .dayhead { display: grid; justify-items: center; padding: 6px 0; border-radius: 12px; }
   .dayhead .wd { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
   .dayhead .num { font-size: 1.2rem; font-weight: 600; }
-  .dayhead.today .num { color: var(--accent); }
+  .dayhead.today .num { color: var(--accent); background: var(--accent-soft);
+                        border-radius: 99px; padding: 0 10px; }
   .scroller { overflow-y: auto; position: relative; }
   .hour-label { height: var(--hour); font-size: 0.7rem; color: var(--muted);
                 transform: translateY(-0.6em); text-align: right; padding-right: 8px; }
@@ -280,6 +311,16 @@
   .block-top { display: flex; align-items: center; gap: 4px; }
   .block-top input { width: 14px; height: 14px; flex: none; }
   .block-title { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Ab einer Stunde Länge darf der Titel zwei Zeilen haben */
+  .block.tall .block-top { align-items: flex-start; }
+  .block.tall .block-title { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical;
+                             -webkit-line-clamp: 2; line-clamp: 2; }
+  .block.tall .block-top input { margin-top: 2px; }
+  /* Linie für die aktuelle Uhrzeit */
+  .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--accent);
+         z-index: 4; pointer-events: none; }
+  .now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px;
+                 border-radius: 50%; background: var(--accent); }
   .block.short .block-time { display: none; }
   .block-time { color: var(--muted); font-size: 0.72rem; }
   .remove { padding: 0 4px; color: var(--muted); visibility: hidden; }

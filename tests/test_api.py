@@ -221,9 +221,11 @@ def test_local_change_triggers_sync(tmp_path, monkeypatch):
 
 def test_settings_defaults_and_change(client):
     s = client.get("/api/settings").json()
-    assert s == {"theme": "system", "sync_interval_minutes": 5}
+    assert s == {"theme": "system", "accent": "blue", "sync_interval_minutes": 5}
     r = client.patch("/api/settings", json={"theme": "dark", "sync_interval_minutes": 15})
-    assert r.json() == {"theme": "dark", "sync_interval_minutes": 15}
+    assert r.json() == {"theme": "dark", "accent": "blue", "sync_interval_minutes": 15}
+    assert client.patch("/api/settings", json={"accent": "green"}).json()["accent"] == "green"
+    assert client.patch("/api/settings", json={"accent": "neon"}).status_code == 422
     assert client.get("/api/settings").json()["theme"] == "dark"
     assert client.get("/api/sync/status").json()["interval_minutes"] == 15
     assert client.patch("/api/settings", json={"theme": "pink"}).status_code == 422

@@ -36,7 +36,7 @@
   onMount(() => {
     reload()
     pollSync()
-    api.settings().then((s) => applyTheme(s.theme)).catch(() => {})
+    api.settings().then((s) => applyTheme(s.theme, s.accent)).catch(() => {})
     // Zustand des Google-Abgleichs alle 10 Sekunden abfragen (S-10)
     const syncTimer = setInterval(pollSync, 10_000)
     // Jede Minute neu laden: So greift der Tageswechsel (R-9), solange die App läuft.
@@ -120,7 +120,7 @@
 </div>
 
 <style>
-  .shell { max-width: 1280px; margin: 0 auto; padding: 16px 32px 96px; }
+  .shell { max-width: 1760px; margin: 0 auto; padding: 16px 32px 48px; }
   @media (max-width: 640px) { .shell { padding: 12px 16px 96px; } }
   nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 24px; }
   .brand { font-weight: 700; margin-right: 16px; }

@@ -81,20 +81,20 @@
     </aside>
 
     <section class="grid">
-      <TimeGrid days={data.days} today={data.today} {entries} events={data.events} height="calc(100vh - 300px)" />
+      <TimeGrid days={data.days} today={data.today} {entries} events={data.events} height="calc(100vh - 250px)" />
     </section>
   </div>
 {/if}
 
 <style>
-  header { display: grid; gap: 8px; margin-bottom: 16px; }
+  header { display: grid; gap: 6px; margin-bottom: 12px; }
   .nav { display: flex; gap: 4px; }
   h1 { margin: 0; font-size: 1.6rem; font-weight: 600; }
   .range { color: var(--muted); font-weight: 400; font-size: 1.1rem; }
   .progress { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: end; }
-  .layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; }
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
-  aside { max-height: calc(100vh - 260px); overflow-y: auto; padding-right: 8px; }
+  aside { max-height: calc(100vh - 200px); overflow-y: auto; padding-right: 8px; }
   h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
        color: var(--muted); margin: 20px 0 4px; font-weight: 600; }
   .hint { font-size: 0.8rem; color: var(--muted); margin: 0; }

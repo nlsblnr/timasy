@@ -1,6 +1,6 @@
 <script>
   // Heute-Ansicht (V-1): Datum, Fortschritt, Pflicht- und Bonus-Liste,
-  // daneben "Diese Woche" mit offenen Wochen-Einträgen.
+  // darunter "Diese Woche" mit offenen Wochen-Einträgen (v0.10).
   // Daneben die Tages-Zeitleiste mit Blöcken (Akzentfarbe) und Fremdterminen (grau).
   import { api } from '../lib/api.js'
   import { app, showError } from '../lib/state.svelte.js'
@@ -148,35 +148,38 @@
       {:else}
         <p class="empty">Keine Bonus-Einträge.</p>
       {/if}
+
+      <div class="week">
+        <h2>Diese Woche</h2>
+        <p class="sub">ab {formatShort(data.week_start)}</p>
+        <ProgressBar label="Wochenfortschritt" done={data.week_progress.must_done}
+                     total={data.week_progress.must_total} ratio={data.week_progress.must_ratio} />
+        {#if weekEntries.length}
+          <ul>
+            {#each weekEntries as entry (entry.id)}
+              <EntryItem {entry} assignTo={data.date >= data.today ? data.date : null}
+                         assignLabel={relative ? `→ ${relative}` : '→ Tag'} />
+            {/each}
+          </ul>
+        {:else}
+          <p class="empty">Keine offenen Wochen-Einträge.</p>
+        {/if}
+      </div>
     </section>
 
     <aside class="side">
       <h2>Zeitleiste</h2>
       <p class="sub">Einträge hierher ziehen, um sie einzuplanen.</p>
-      <TimeGrid days={[data.date]} today={data.today} showHeader={false} height="420px"
+      <TimeGrid days={[data.date]} today={data.today} showHeader={false} height="calc(100vh - 170px)"
                 events={data.events}
                 entries={data.entries.filter((e) => e.task_id !== app.pendingDelete?.taskId)} />
 
-      <h2 class="weekhead">Diese Woche</h2>
-      <p class="sub">ab {formatShort(data.week_start)}</p>
-      <ProgressBar label="Wochenfortschritt" done={data.week_progress.must_done}
-                   total={data.week_progress.must_total} ratio={data.week_progress.must_ratio} />
-      {#if weekEntries.length}
-        <ul>
-          {#each weekEntries as entry (entry.id)}
-            <EntryItem {entry} assignTo={data.date >= data.today ? data.date : null}
-                       assignLabel={relative ? `→ ${relative}` : '→ Tag'} />
-          {/each}
-        </ul>
-      {:else}
-        <p class="empty">Keine offenen Wochen-Einträge.</p>
-      {/if}
     </aside>
   </div>
 {/if}
 
 <style>
-  .layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 48px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr); gap: 48px; }
   @media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
   header { display: grid; gap: 2px; margin-bottom: 20px; }
   .nav { display: flex; gap: 4px; align-items: center; }
@@ -187,10 +190,10 @@
   h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em;
        color: var(--muted); margin: 28px 0 4px; font-weight: 600; }
   .side h2 { margin-top: 8px; }
-  .side .weekhead { margin-top: 32px; }
+  .week { margin-top: 40px; }
   .sub { margin: 0 0 16px; color: var(--muted); font-size: 0.85rem; }
   ul { padding: 0; margin: 0; }
   .empty { color: var(--muted); font-size: 0.9rem; }
-  .side { border-left: 1px solid var(--line); padding-left: 32px; }
+  .side { border-left: 1px solid var(--line); padding-left: 32px; position: sticky; top: 12px; align-self: start; }
   @media (max-width: 820px) { .side { border: none; padding: 0; } }
 </style>

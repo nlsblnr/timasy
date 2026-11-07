@@ -76,10 +76,14 @@ export async function pollSync() {
   } catch {}
 }
 
-// --- Theme (V-6) ----------------------------------------------------------------
+// --- Theme und Akzentfarbe (V-6, UX-2) ----------------------------------------------------------------
 // "system" folgt der Systemeinstellung; "light"/"dark" setzen data-theme am <html>.
 
-export function applyTheme(theme) {
-  if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme
-  else delete document.documentElement.dataset.theme
+export function applyTheme(theme, accent = 'blue') {
+  const root = document.documentElement
+  if (theme === 'light' || theme === 'dark') root.dataset.theme = theme
+  else delete root.dataset.theme
+  // Akzentfarbe (UX-2): Blau ist Standard und braucht kein Attribut
+  if (accent && accent !== 'blue') root.dataset.accent = accent
+  else delete root.dataset.accent
 }

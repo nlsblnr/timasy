@@ -9,14 +9,16 @@
   let backups = $state([])
   let backupInfo = $state('')
 
-  api.settings().then((s) => (settings = s)).catch(showError)
-  const loadBackups = () => api.backups().then((b) => (backups = b)).catch(showError)
+  // Fehlt ein Teil (z.B. weil noch ein alter Server läuft), nur einen Hinweis zeigen
+  let partMissing = $state(false)
+  api.settings().then((s) => (settings = s)).catch(() => (partMissing = true))
+  const loadBackups = () => api.backups().then((b) => (backups = b)).catch(() => (partMissing = true))
   loadBackups()
 
   async function save(change) {
     try {
       settings = await api.saveSettings(change)
-      applyTheme(settings.theme)
+      applyTheme(settings.theme, settings.accent)
       pollSync()
     } catch (e) {
       showError(e)
@@ -36,6 +38,10 @@
   const sizeText = (bytes) => `${Math.max(1, Math.round(bytes / 1024))} KB`
   const themes = [['system', 'Wie System'], ['light', 'Hell'], ['dark', 'Dunkel']]
   const intervals = [1, 5, 10, 15, 30, 60]
+  // Akzentfarben (UX-2); die Farbe des Knopfs zeigt den Ton im Hellmodus
+  const accents = [['blue', 'Blau', '#3f6ad8'], ['green', 'Grün', '#2f7d5b'],
+                   ['violet', 'Violett', '#7a52c7'], ['orange', 'Orange', '#b85f12'],
+                   ['rose', 'Rosé', '#c2416e']]
 
   // Beim Öffnen sofort neu prüfen, z.B. nachdem credentials.json abgelegt wurde
   let checked = false   // nur einmal pro Öffnen der Seite
@@ -83,6 +89,10 @@
 </script>
 
 <h1>Einstellungen</h1>
+{#if partMissing}
+  <p class="sub error">Ein Teil der Einstellungen konnte nicht geladen werden. Läuft eine ältere
+    Version von Timasy? Dann <code>run.py</code> beenden (Ctrl+C) und neu starten.</p>
+{/if}
 
 <section>
   <h2>Google Calendar</h2>
@@ -134,6 +144,15 @@
         <button role="radio" aria-checked={settings.theme === value}
                 class:active={settings.theme === value}
                 onclick={() => save({ theme: value })}>{label}</button>
+      {/each}
+    </div>
+    <div class="accents" role="radiogroup" aria-label="Akzentfarbe">
+      {#each accents as [value, label, color]}
+        <button role="radio" aria-checked={settings.accent === value} title={label}
+                class="swatch-button" class:active={settings.accent === value}
+                onclick={() => save({ accent: value })}>
+          <span class="swatch-dot" style="background: {color}"></span>{label}
+        </button>
       {/each}
     </div>
   </section>
@@ -209,6 +228,11 @@
   .segmented button.active { background: var(--surface-raised); color: var(--text);
                              box-shadow: 0 1px 3px var(--shadow); font-weight: 600; }
   .ok { margin: 0; align-self: center; }
+  .accents { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .swatch-button { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+                   color: var(--text); padding: 6px 14px 6px 8px; }
+  .swatch-button.active { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .swatch-dot { width: 18px; height: 18px; border-radius: 50%; }
   .backups { margin-top: 12px; }
   .backups li { display: flex; gap: 12px; padding: 4px 0; }
   .backups .sub { margin: 0; }

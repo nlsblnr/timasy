@@ -56,6 +56,35 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 
+
+/* Akzentfarbe (UX-2, v0.10): wählbar in den Einstellungen, als data-accent am
+   <html>-Element. Blau ist der Standard oben. Pro Farbe ein Ton für hell und
+   einer für dunkel; --inverse-accent ist der Ton auf der dunklen bzw. hellen
+   Snackbar. */
+:root[data-accent="green"] { --accent: #2f7d5b; --inverse-accent: #8fd6b0; }
+:root[data-theme="dark"][data-accent="green"] { --accent: #8fd6b0; --inverse-accent: #2f7d5b; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="green"]:not([data-theme="light"]) { --accent: #8fd6b0; --inverse-accent: #2f7d5b; }
+}
+:root[data-accent="violet"] { --accent: #7a52c7; --inverse-accent: #cdb4ff; }
+:root[data-theme="dark"][data-accent="violet"] { --accent: #cdb4ff; --inverse-accent: #7a52c7; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="violet"]:not([data-theme="light"]) { --accent: #cdb4ff; --inverse-accent: #7a52c7; }
+}
+:root[data-accent="orange"] { --accent: #b85f12; --inverse-accent: #ffc08a; }
+:root[data-theme="dark"][data-accent="orange"] { --accent: #ffc08a; --inverse-accent: #b85f12; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="orange"]:not([data-theme="light"]) { --accent: #ffc08a; --inverse-accent: #b85f12; }
+}
+:root[data-accent="rose"] { --accent: #c2416e; --inverse-accent: #ffb0c8; }
+:root[data-theme="dark"][data-accent="rose"] { --accent: #ffb0c8; --inverse-accent: #c2416e; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="rose"]:not([data-theme="light"]) { --accent: #ffb0c8; --inverse-accent: #c2416e; }
+}
+
+/* Zarte Fläche in der Akzentfarbe, z.B. für die aktive Ansicht */
+:root { --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent); }
+
 * { box-sizing: border-box; }
 
 body {
@@ -92,7 +121,7 @@ button.text { color: var(--accent); }
 button.text:hover, button.icon:hover, button.tab:hover { background: var(--surface); }
 button.icon, summary.icon { font-size: 1.3rem; line-height: 1; padding: 4px 10px; border-radius: 99px; }
 button.tab { color: var(--muted); }
-button.tab.active { color: var(--text); background: var(--surface); font-weight: 600; }
+button.tab.active { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 
 .chip {
   border: 1px solid var(--line);
